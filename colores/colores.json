@@ -1,0 +1,10 @@
+{
+  "negro":         { "hex": "#0A0A0B", "rgb": [10, 10, 11],    "uso": "Fondo principal (60%)" },
+  "blanco":        { "hex": "#FFFFFF", "rgb": [255, 255, 255], "uso": "Logo y textos" },
+  "violeta":       { "hex": "#9B72FF", "rgb": [155, 114, 255], "uso": "Bloque \"digital\" y acentos, poco por pieza" },
+  "violetaClaro":  { "hex": "#B79BFF", "rgb": [183, 155, 255], "uso": "Etiquetas sobre negro" },
+  "ciruela":       { "hex": "#22102C", "rgb": [34, 16, 44],    "uso": "Ícono y bloques destacados" },
+  "hueso":         { "hex": "#F3F1EC", "rgb": [243, 241, 236], "uso": "Propuestas e impresos" },
+  "grafito":       { "hex": "#17171A", "rgb": [23, 23, 26],    "uso": "Tarjetas sobre negro" },
+  "gris":          { "hex": "#8E8E96", "rgb": [142, 142, 150], "uso": "Texto secundario" }
+}

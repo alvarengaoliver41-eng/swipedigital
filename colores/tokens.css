@@ -1,0 +1,24 @@
+/* swipe digital — tokens de marca
+   Tipografías: https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap */
+
+:root {
+  /* Color */
+  --sd-negro: #0A0A0B;       /* fondo principal (60%) */
+  --sd-blanco: #FFFFFF;      /* logo y textos */
+  --sd-violeta: #9B72FF;     /* bloque "digital" y acentos */
+  --sd-violeta-claro: #B79BFF; /* etiquetas sobre negro */
+  --sd-ciruela: #22102C;     /* ícono y bloques destacados */
+  --sd-hueso: #F3F1EC;       /* propuestas e impresos */
+  --sd-grafito: #17171A;     /* tarjetas sobre negro */
+  --sd-gris: #8E8E96;        /* texto secundario */
+
+  /* Tipografía */
+  --sd-font-titulos: "Montserrat", sans-serif;  /* 800, la de swipe™ */
+  --sd-font-texto: "Inter", sans-serif;          /* 400–600 */
+  --sd-font-datos: "JetBrains Mono", monospace;  /* 400–500, etiquetas y métricas */
+
+  /* Formas */
+  --sd-radio-chico: 12px;
+  --sd-radio-grande: 22px;
+  --sd-radio-boton: 999px;
+}
