@@ -33,7 +33,8 @@ async function iniciar() {
   try {
     const cfg = await (await fetch('/api/config')).json();
     if (!cfg.supabaseUrl || !cfg.supabaseAnonKey) throw new Error('Faltan las variables de Supabase en el servidor.');
-    sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+    // Sin el candado entre pestañas del navegador: si una pestaña queda trabada, no bloquea a las demás.
+    sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, {auth: {lock: async (_nombre, _espera, fn) => fn()}});
   } catch (e) {
     avisar('No se pudo conectar con la base de datos: ' + e.message);
     return;
