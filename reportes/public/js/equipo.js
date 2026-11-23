@@ -38,7 +38,8 @@ async function iniciar() {
     avisar('No se pudo conectar con la base de datos: ' + e.message);
     return;
   }
-  sb.auth.onAuthStateChange((_ev, sesion) => mostrarVista(sesion));
+  // Supabase no deja hacer consultas dentro de este aviso (se traba), por eso se difiere con setTimeout.
+  sb.auth.onAuthStateChange((_ev, sesion) => { setTimeout(() => mostrarVista(sesion), 0); });
   const {data} = await sb.auth.getSession();
   mostrarVista(data.session);
 }
