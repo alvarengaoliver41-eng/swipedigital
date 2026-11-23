@@ -19,6 +19,7 @@
     </div>
     <div class="cv-top-r">
       <span class="cv-label cv-mono">Reporte de resultados</span>
+      <button type="button" class="cv-imprimir" id="btn-pdf" aria-label="Descargar el reporte en PDF"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0l-5-5m5 5l5-5M5 21h14"/></svg><span>PDF</span></button>
       <select class="cv-select" id="sel-periodo" aria-label="Período">
         <option value="last_7d">Últimos 7 días</option>
         <option value="last_14d">Últimos 14 días</option>
@@ -99,6 +100,20 @@
     </div>
   </section>
 
+  <section class="cv-sec cv-wrap" id="todas-metricas">
+    <div class="cv-head"><div><div class="cv-label cv-mono"><span class="cv-num">05</span>Todas las métricas</div><h2 class="cv-h2 cv-disp">El detalle <span class="c">completo</span></h2></div><p class="cv-intro">Cada número del período con su cambio frente a los <span data-draw="dias-periodo">30</span> días anteriores. Solo aparecen las métricas que tuvieron movimiento.</p></div>
+    <div class="cv-mgrid" id="grupos-metricas" data-draw="metricas" data-source="totales"></div>
+  </section>
+
+  <section class="cv-sec cv-wrap" id="audiencia">
+    <div class="cv-head"><div><div class="cv-label cv-mono"><span class="cv-num">06</span>Audiencia</div><h2 class="cv-h2 cv-disp">Quién vio <span class="c">los anuncios</span></h2></div><p class="cv-intro">Cómo se repartieron los resultados por edad y género, por plataforma y por zona del país.</p></div>
+    <div class="cv-aud">
+      <div class="cv-aud-card ancho" id="aud-edad"><div class="cv-aud-cab"><h3 class="cv-disp">Edad y género</h3><span class="cv-mono cv-aud-sub" data-draw="aud-metrica"></span></div><div data-draw="aud-edad" data-source="segmentos"></div></div>
+      <div class="cv-aud-card" id="aud-plataformas"><div class="cv-aud-cab"><h3 class="cv-disp">Plataformas</h3><span class="cv-mono cv-aud-sub">Inversión y resultados</span></div><div data-draw="aud-plat" data-source="segmentos"></div></div>
+      <div class="cv-aud-card" id="aud-regiones"><div class="cv-aud-cab"><h3 class="cv-disp">Zonas</h3><span class="cv-mono cv-aud-sub" data-draw="aud-metrica"></span></div><div data-draw="aud-reg" data-source="segmentos"></div></div>
+    </div>
+  </section>
+
   <section class="cv-sec cv-wrap" id="destacado">
     <div class="cv-head"><div><div class="cv-label cv-mono"><span class="cv-num">05</span>Creatividades</div><h2 class="cv-h2 cv-disp">El anuncio que <span class="v">mejor funcionó</span></h2></div></div>
     <div class="cv-star" id="anuncio-estrella">
@@ -150,6 +165,11 @@
         <dt>Compras web</dt><dd>Compras que el píxel de Meta atribuye a los anuncios.</dd>
         <dt>Personas alcanzadas</dt><dd>Cuentas únicas que vieron al menos un anuncio en el período.</dd>
         <dt>CTR</dt><dd>Porcentaje de veces que alguien hizo clic al ver el anuncio.</dd>
+        <dt>Impresiones</dt><dd>Cantidad de veces que se mostraron los anuncios, contando repeticiones.</dd>
+        <dt>Frecuencia</dt><dd>Promedio de veces que cada persona vio los anuncios.</dd>
+        <dt>CPM</dt><dd>Lo que costó mostrar los anuncios mil veces.</dd>
+        <dt>ThruPlay</dt><dd>Reproducciones del video hasta el final, o de al menos 15 segundos en videos más largos.</dd>
+        <dt>ROAS</dt><dd>Valor de las compras web dividido por la inversión.</dd>
       </dl>
     </details>
     <div class="marca"><span class="cv-logo"><span class="s cv-disp" style="font-size:20px">swipe</span><span class="tm">™</span><span class="d cv-disp" style="font-size:10px">digital</span></span><div class="cv-mono" style="margin-top:8px">Tráfico pago, IA y sistemas · by swipe™</div></div>

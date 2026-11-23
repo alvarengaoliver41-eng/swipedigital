@@ -180,6 +180,53 @@ html,body{margin:0;background:#0A0A0B}
 .cv-visor-x{position:absolute;top:-14px;right:-14px;z-index:2;width:40px;height:40px;border-radius:50%;border:1px solid var(--borde);background:var(--grafito);color:#FFFFFF;font-size:22px;line-height:1;cursor:pointer}
 body.cv-sin-scroll{overflow:hidden}
 
+/* Todas las métricas */
+.cv-mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;align-items:start}
+.cv-mcard{background:var(--grafito);border:1px solid var(--borde);border-radius:18px;padding:18px 20px 8px}
+.cv-mcard-t{font-size:10.5px;letter-spacing:1.6px;text-transform:uppercase;color:var(--violeta-txt);margin-bottom:6px}
+.cv-mfila{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:11px 0;border-top:1px solid #1F1F25}
+.cv-mfila:first-of-type{border-top:0}
+.cv-mfila .izq{display:flex;flex-direction:column;min-width:0}
+.cv-mfila .etq{font-size:14px;color:#FFFFFF}
+.cv-mfila .ayu{font-size:11.5px;color:var(--gris);line-height:1.35;margin-top:2px}
+.cv-mfila .der{display:flex;flex-direction:column;align-items:flex-end;flex:none}
+.cv-mfila .v{font-family:'SW Montserrat',Montserrat,sans-serif;font-weight:800;font-size:18px;letter-spacing:-0.02em;font-variant-numeric:tabular-nums;white-space:nowrap}
+.cv-mfila .chg{font-size:11px;margin-top:2px}
+.cv-mfila .chg.ok{color:var(--ok)}.cv-mfila .chg.mal{color:var(--mal)}.cv-mfila .chg.neu{color:var(--gris)}
+
+/* Audiencia */
+.cv-aud{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.cv-aud-card{background:var(--grafito);border:1px solid var(--borde);border-radius:18px;padding:20px}
+.cv-aud-card.ancho{grid-column:1/-1}
+.cv-aud-cab{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:4px 12px;margin-bottom:16px}
+.cv-aud-cab h3{font-size:19px;letter-spacing:-0.03em;margin:0}
+.cv-aud-sub{font-size:10.5px;letter-spacing:1.3px;text-transform:uppercase;color:var(--gris)}
+.cv-abar{display:block;flex:1;height:10px;border-radius:999px;background:#1F1D27;overflow:hidden}
+.cv-abar i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--violeta),var(--cl))}
+.cv-abar.f i{background:var(--violeta)}
+.cv-abar.m i{background:#E9E6F2}
+.cv-aud-ley{display:flex;gap:18px;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--texto2);margin-bottom:12px}
+.cv-aud-ley span::before{content:"";display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:7px;vertical-align:0}
+.cv-aud-ley .f::before{background:var(--violeta)}.cv-aud-ley .m::before{background:#E9E6F2}
+.cv-edad{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px 28px}
+.cv-edad-fila{display:grid;grid-template-columns:52px minmax(0,1fr);align-items:center;gap:12px}
+.cv-edad-fila .ed{font-size:12px;color:var(--texto2)}
+.cv-edad-fila .barras{display:flex;flex-direction:column;gap:5px}
+.cv-edad-fila .linea{display:flex;align-items:center;gap:10px}
+.cv-edad-fila .linea .n{font-size:12px;color:var(--texto2);min-width:42px;text-align:right;font-variant-numeric:tabular-nums}
+.cv-plat,.cv-reg{padding:10px 0;border-top:1px solid #1F1F25}
+.cv-plat:first-child,.cv-reg:first-child{border-top:0;padding-top:0}
+.cv-plat .cab,.cv-reg .cab{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:7px}
+.cv-plat .nom,.cv-reg .nom{font-size:14.5px;font-weight:500}
+.cv-plat .pct,.cv-reg .n{font-size:11px;color:var(--texto2);white-space:nowrap}
+.cv-plat .pie{display:flex;gap:14px;font-size:12.5px;color:var(--gris);margin-top:7px}
+.cv-empty.chico{min-height:90px;font-size:13px}
+
+/* Botón PDF */
+.cv-imprimir{display:inline-flex;align-items:center;gap:7px;background:var(--grafito);border:1px solid var(--borde);border-radius:999px;color:#FFFFFF;font-family:'SW Inter',Inter,system-ui,sans-serif;font-size:13.5px;padding:9px 14px;cursor:pointer}
+.cv-imprimir svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.cv-imprimir:hover{border-color:#3A3A44}
+
 /* Tablas */
 .cv-tablewrap{overflow-x:auto;border:1px solid var(--borde);border-radius:16px;background:var(--grafito);margin-top:14px}
 .cv-table{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-numeric:tabular-nums;min-width:600px}
@@ -234,7 +281,20 @@ body.cv-sin-scroll{overflow:hidden}
 .cv-foot dl{display:grid;grid-template-columns:minmax(110px,max-content) 1fr;gap:6px 16px;margin:12px 0 0}
 .cv-foot dt{color:#FFFFFF;font-weight:500}.cv-foot dd{margin:0}
 .cv-foot .marca{text-align:right}
-@media print{.cv .dash-select,#cargar-ventas{display:none}.cv-ribbon{backdrop-filter:none}}
+@media print{
+  @page{size:A4;margin:10mm}
+  html,body{background:#0A0A0B}
+  .cv{-webkit-print-color-adjust:exact;print-color-adjust:exact;overflow:visible}
+  .cv-imprimir,.cv-select,.cv-mas,.cv-galeria-ayuda,.cv-visor,.cv-foot details{display:none!important}
+  .cv-ribbon,.cv-pieza .chip,.cv-pieza .play{backdrop-filter:none}
+  .cv-cover::before,.cv-cover::after{display:none}
+  .cv-sec{padding-top:28px}
+  .cv-mcard,.cv-aud-card,.cv-vcard,.cv-ad,.cv-meta,.cv-star,.cv-embudo,.cv-chartbox,.cv-nota,.cv-rb{break-inside:avoid}
+  .cv-head{break-after:avoid}
+  .cv-galeria{display:grid!important;grid-template-columns:repeat(4,1fr)!important;overflow:visible!important;margin:0!important;padding:0!important}
+  .cv-galeria .cv-ad{flex:none!important}
+  .cv-galeria .cv-ad[hidden]{display:flex!important}
+}
 
 /* Sitio */
 .cv-aviso{margin:24px clamp(20px,5vw,64px) 0;padding:14px 18px;border:1px solid color-mix(in srgb,var(--mal) 45%,transparent);border-radius:14px;background:#1A1012;color:#FFD3D3;font-size:14px}
@@ -320,6 +380,17 @@ body.cv-sin-scroll{overflow:hidden}
   .cv-table td.acc{grid-column:1/-1;display:flex;gap:18px;justify-content:flex-start}
   .cv-table td.acc .cv-link{padding:0}
   .cv-equipo{margin-top:56px}
+  .cv-mgrid{grid-template-columns:1fr}
+  .cv-mcard{padding:16px 16px 6px}
+  .cv-mfila .etq{font-size:13.5px}
+  .cv-mfila .v{font-size:17px}
+  .cv-aud{grid-template-columns:1fr}
+  .cv-aud-card{padding:16px}
+  .cv-edad{grid-template-columns:1fr}
+  .cv-imprimir span{display:none}
+  .cv-imprimir{padding:9px 11px}
+  .cv-top-r{gap:8px}
+  .cv-top-r .cv-label{flex:1}
   .cv-nota{padding:20px}
   .cv-foot{flex-direction:column}
   .cv-foot .marca{text-align:left}
