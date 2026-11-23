@@ -45,7 +45,7 @@ async function iniciar() {
   mostrarVista(data.session);
 }
 
-let vistaUsuario = null;
+let vistaUsuario; // undefined al inicio, para que la primera vista siempre se dibuje (también sin sesión)
 async function mostrarVista(sesion) {
   const uid = sesion?.user?.id || null;
   if (uid === vistaUsuario) return;
