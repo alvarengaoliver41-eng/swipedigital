@@ -47,6 +47,51 @@ const num = (v) => {
 };
 const accion = (lista, tipo) => num((lista || []).find((a) => a.action_type === tipo)?.value);
 
+const sumaLista = (lista) => (lista || []).reduce((t, a) => t + num(a.value), 0);
+const primero = (...vals) => vals.find((v) => v > 0) || 0;
+
+// Todas las métricas de un período, con nombres en castellano.
+const CAMPOS_TOTALES = ['spend', 'impressions', 'reach', 'frequency', 'cpm', 'clicks', 'ctr', 'inline_link_clicks', 'inline_link_click_ctr',
+  'cost_per_inline_link_click', 'actions', 'action_values', 'video_play_actions', 'video_thruplay_watched_actions', 'video_p25_watched_actions',
+  'video_p50_watched_actions', 'video_p75_watched_actions', 'video_p100_watched_actions', 'video_avg_time_watched_actions'].join(',');
+function metricasDe(r) {
+  if (!r) return null;
+  const a = r.actions, v = r.action_values;
+  return {
+    inversion: num(r.spend), impresiones: num(r.impressions), alcance: num(r.reach), frecuencia: num(r.frequency), cpm: num(r.cpm),
+    clics: num(r.clicks), ctr: num(r.ctr), clics_enlace: num(r.inline_link_clicks), ctr_enlace: num(r.inline_link_click_ctr),
+    cpc_enlace: num(r.cost_per_inline_link_click),
+    reproducciones_3s: accion(a, 'video_view'), reproducciones: sumaLista(r.video_play_actions), thruplays: sumaLista(r.video_thruplay_watched_actions),
+    video_25: sumaLista(r.video_p25_watched_actions), video_50: sumaLista(r.video_p50_watched_actions), video_75: sumaLista(r.video_p75_watched_actions),
+    video_100: sumaLista(r.video_p100_watched_actions), video_segundos: sumaLista(r.video_avg_time_watched_actions),
+    conversaciones: accion(a, ACCION_MENSAJE), primeras_respuestas: accion(a, 'onsite_conversion.messaging_first_reply'),
+    vistas_destino: primero(accion(a, 'omni_landing_page_view'), accion(a, 'landing_page_view')),
+    carrito: primero(accion(a, 'omni_add_to_cart'), accion(a, 'add_to_cart')),
+    pagos_iniciados: primero(accion(a, ACCION_PAGO), accion(a, 'initiate_checkout')),
+    compras: accion(a, ACCION_COMPRA), valor_compras: accion(v, ACCION_COMPRA),
+    interacciones: accion(a, 'post_engagement'), reacciones: accion(a, 'post_reaction'), comentarios: accion(a, 'comment'),
+    compartidos: accion(a, 'post'), guardados: primero(accion(a, 'onsite_conversion.post_save'), accion(a, 'post_save')),
+    seguidores: accion(a, 'onsite_conversion.instagram_profile_follow') || accion(a, 'like'),
+  };
+}
+
+// Reparto del período por edad y género, por plataforma y por región.
+const NOMBRES_PLATAFORMA = {facebook: 'Facebook', instagram: 'Instagram', messenger: 'Messenger', audience_network: 'Audience Network', threads: 'Threads', whatsapp: 'WhatsApp'};
+async function segmentosDe(act, rango) {
+  const pedirSeg = (breakdowns) => todas(`${act}/insights`, {level: 'account', time_range: rango, breakdowns,
+    fields: 'spend,impressions,reach,inline_link_clicks,actions,action_values'}).catch((e) => { console.error('segmentos', breakdowns, e.message); return []; });
+  const base = (r) => ({inversion: num(r.spend), impresiones: num(r.impressions), alcance: num(r.reach), clics_enlace: num(r.inline_link_clicks),
+    conversaciones: accion(r.actions, ACCION_MENSAJE), compras: accion(r.actions, ACCION_COMPRA)});
+  const [edad, plataformas, regiones] = await Promise.all([pedirSeg('age,gender'), pedirSeg('publisher_platform'), pedirSeg('region')]);
+  return {
+    edad_genero: edad.filter((r) => r.age && r.age !== 'Unknown').map((r) => ({edad: r.age, genero: r.gender, ...base(r)})),
+    plataformas: plataformas.map((r) => ({plataforma: NOMBRES_PLATAFORMA[r.publisher_platform] || r.publisher_platform, ...base(r)}))
+      .filter((r) => r.impresiones > 0).sort((a, b) => b.inversion - a.inversion),
+    regiones: regiones.filter((r) => r.region && r.region !== 'Unknown').map((r) => ({region: r.region, ...base(r)}))
+      .filter((r) => r.impresiones > 0).sort((a, b) => b.impresiones - a.impresiones).slice(0, 12),
+  };
+}
+
 // Fecha de ayer en la zona horaria de la cuenta publicitaria (Meta cierra el día en esa zona).
 function ayerEn(zona) {
   const hoy = new Intl.DateTimeFormat('en-CA', {timeZone: zona || 'America/Asuncion', year: 'numeric', month: '2-digit', day: '2-digit'}).format(new Date());
@@ -69,15 +114,18 @@ export async function reporteMeta(cuenta, periodo) {
   const desde = sumarDias(hasta, -(dias - 1));
   const inicio90 = sumarDias(hasta, -89);
   const rango = {since: desde, until: hasta};
+  const rangoAnterior = {since: sumarDias(desde, -dias), until: sumarDias(desde, -1)};
 
-  const [diarias, resumen, campanas, anuncios] = await Promise.all([
+  const [diarias, resumen, campanas, anuncios, totalAnterior, segmentos] = await Promise.all([
     todas(`${act}/insights`, {level: 'account', time_increment: 1, time_range: {since: inicio90, until: hasta},
       fields: 'spend,impressions,clicks,inline_link_clicks,actions,action_values'}),
-    pedir(`${act}/insights`, {level: 'account', time_range: rango, fields: 'reach,frequency,spend,impressions'}),
+    pedir(`${act}/insights`, {level: 'account', time_range: rango, fields: CAMPOS_TOTALES}),
     todas(`${act}/insights`, {level: 'campaign', time_range: rango,
       fields: 'campaign_id,campaign_name,spend,impressions,inline_link_clicks,ctr,actions,action_values'}),
     pedir(`${act}/insights`, {level: 'ad', time_range: rango, sort: 'spend_descending', limit: 10,
       fields: 'ad_id,ad_name,campaign_name,spend,impressions,inline_link_clicks,ctr,actions'}),
+    pedir(`${act}/insights`, {level: 'account', time_range: rangoAnterior, fields: CAMPOS_TOTALES}).catch((e) => { console.error('anterior', e.message); return {}; }),
+    segmentosDe(act, rango),
   ]);
 
   // Meta omite los días sin actividad: se completa el calendario con ceros.
@@ -107,6 +155,8 @@ export async function reporteMeta(cuenta, periodo) {
     rango: {desde, hasta},
     diario,
     resumen: r0 ? [{reach: num(r0.reach), frequency: num(r0.frequency)}] : [],
+    totales: {actual: metricasDe(r0), anterior: metricasDe(totalAnterior.data?.[0])},
+    segmentos,
     campanas: campanas
       .map((c) => ({id: c.campaign_id, name: c.campaign_name, effective_status: estados[c.campaign_id] || null, amount_spent: num(c.spend), ...resultado(c)}))
       .filter((c) => c.amount_spent > 0)
