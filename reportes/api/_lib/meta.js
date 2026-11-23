@@ -99,7 +99,7 @@ export async function reporteMeta(cuenta, periodo) {
   }
 
   const r0 = resumen.data?.[0];
-  const estados = await estadosDe([...campanas.map((c) => c.campaign_id), ...(anuncios.data || []).map((a) => a.ad_id)]);
+  const estados = await estadosDe(act, campanas.map((c) => c.campaign_id), (anuncios.data || []).map((a) => a.ad_id));
 
   return {
     cuenta: {nombre: info.name, moneda: info.currency, zona: info.timezone_name},
@@ -130,13 +130,18 @@ function resultado(r) {
   return {resultados: cant || null, tipo_resultado: tipo, costo_por_resultado: cant > 0 ? gasto / cant : null};
 }
 
-async function estadosDe(ids) {
-  const unicos = [...new Set(ids.filter(Boolean))];
+// Estado actual (activa, pausada…) de campañas y anuncios, pedido a la cuenta filtrando por sus IDs.
+async function estadosDe(act, campanas, anuncios) {
   const salida = {};
-  for (let i = 0; i < unicos.length; i += 50) {
-    const lote = unicos.slice(i, i + 50);
-    const j = await pedir('', {ids: lote.join(','), fields: 'effective_status'}).catch(() => ({}));
-    for (const [id, v] of Object.entries(j)) salida[id] = v?.effective_status || null;
-  }
+  const buscar = async (tipo, ids) => {
+    const unicos = [...new Set(ids.filter(Boolean))];
+    for (let i = 0; i < unicos.length; i += 50) {
+      const lote = unicos.slice(i, i + 50);
+      const j = await pedir(`${act}/${tipo}`, {fields: 'id,effective_status', limit: '100',
+        filtering: [{field: 'id', operator: 'IN', value: lote}]}).catch((e) => { console.error('estados', tipo, e.message); return {}; });
+      for (const f of j.data || []) salida[f.id] = f.effective_status || null;
+    }
+  };
+  await Promise.all([buscar('campaigns', campanas), buscar('ads', anuncios)]);
   return salida;
 }

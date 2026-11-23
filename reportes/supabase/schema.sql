@@ -90,3 +90,20 @@ drop policy if exists "equipo cambia logos" on storage.objects;
 create policy "equipo cambia logos" on storage.objects for update to authenticated using (bucket_id = 'logos' and public.es_equipo()) with check (bucket_id = 'logos' and public.es_equipo());
 drop policy if exists "equipo borra logos" on storage.objects;
 create policy "equipo borra logos" on storage.objects for delete to authenticated using (bucket_id = 'logos' and public.es_equipo());
+
+-- Lectura del equipo: lo que hicimos, lo que aprendimos y los próximos pasos, una por cliente y mes.
+create table if not exists public.notas (
+  cliente_id uuid not null references public.clientes(id) on delete cascade,
+  mes text not null check (mes ~ '^[0-9]{4}-[0-9]{2}$'),
+  hicimos_titulo text check (char_length(hicimos_titulo) <= 90),
+  hicimos_texto text check (char_length(hicimos_texto) <= 600),
+  aprendimos_titulo text check (char_length(aprendimos_titulo) <= 90),
+  aprendimos_texto text check (char_length(aprendimos_texto) <= 600),
+  proximos_titulo text check (char_length(proximos_titulo) <= 90),
+  proximos_texto text check (char_length(proximos_texto) <= 600),
+  actualizado timestamptz not null default now(),
+  primary key (cliente_id, mes)
+);
+alter table public.notas enable row level security;
+drop policy if exists "equipo gestiona notas" on public.notas;
+create policy "equipo gestiona notas" on public.notas for all to authenticated using (public.es_equipo()) with check (public.es_equipo());
