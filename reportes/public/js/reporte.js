@@ -1,0 +1,459 @@
+// Reporte de resultados de swipe digital: cálculos y dibujos.
+// Los datos llegan de /api/reporte (Meta) y /api/ventas (ventas y metas que carga el equipo).
+
+// ===== Cálculos =====
+dash.calc('kpis', {
+  title: 'Totales de Meta del período y del anterior',
+  description: 'Suma los días del período elegido y los del mismo número de días justo antes; el alcance y la frecuencia vienen del resumen del período.',
+  inputs: ['diario', 'resumen'],
+  fn: (diario, resumen) => {
+    const dias = ({last_7d: 7, last_14d: 14, last_30d: 30})[dash.params().periodo] || 30;
+    const filas = diario.filter((r) => r.date_start).slice().sort((a, b) => (a.date_start < b.date_start ? -1 : 1));
+    const actual = filas.slice(-dias), anterior = filas.slice(-2 * dias, -dias);
+    const suma = (rows, k) => rows.reduce((t, r) => t + (Number(r[k]) || 0), 0);
+    const div = (a, b) => (b > 0 ? a / b : null);
+    const totales = (rows) => {
+      const o = {inversion: suma(rows, 'amount_spent'), clics_enlace: suma(rows, 'link_click'), compras: suma(rows, 'omni_purchase'), valor: suma(rows, 'omni_purchase_values'), mensajes: suma(rows, 'mensajes')};
+      o.roas = div(o.valor, o.inversion);
+      o.costo_compra = div(o.inversion, o.compras);
+      o.costo_mensaje = div(o.inversion, o.mensajes);
+      return o;
+    };
+    const a = totales(actual), b = totales(anterior);
+    const r0 = resumen[0] || {};
+    const fila = {desde: actual.length ? actual[0].date_start : null, hasta: actual.length ? actual[actual.length - 1].date_start : null,
+      alcance: r0.reach == null ? null : Number(r0.reach), frecuencia: r0.frequency == null ? null : Number(r0.frequency)};
+    for (const k of Object.keys(a)) { fila[k] = a[k]; fila['cambio_' + k] = a[k] != null && b[k] ? (a[k] - b[k]) / b[k] : null; }
+    return [fila];
+  },
+});
+
+dash.calc('ventas_kpi', {
+  title: 'Ventas por WhatsApp del período',
+  description: 'Ventas diarias que carga el equipo en las fechas del período, cruzadas con la inversión y las conversaciones de Meta de esos mismos días.',
+  inputs: ['ventas', 'diario'],
+  fn: (ventas, diario) => {
+    const dias = ({last_7d: 7, last_14d: 14, last_30d: 30})[dash.params().periodo] || 30;
+    const filas = diario.filter((r) => r.date_start).slice().sort((a, b) => (a.date_start < b.date_start ? -1 : 1));
+    const actual = filas.slice(-dias), anterior = filas.slice(-2 * dias, -dias);
+    const suma = (rows, k) => rows.reduce((t, r) => t + (Number(r[k]) || 0), 0);
+    const rango = (rows) => (rows.length ? [rows[0].date_start, rows[rows.length - 1].date_start] : null);
+    const enRango = (r) => (r ? ventas.filter((v) => typeof v.fecha === 'string' && v.fecha >= r[0] && v.fecha <= r[1]) : []);
+    const ra = rango(actual), rb = rango(anterior);
+    const act = enRango(ra), ant = enRango(rb);
+    const n = suma(act, 'ventas'), monto = suma(act, 'monto'), nAnt = suma(ant, 'ventas'), montoAnt = suma(ant, 'monto');
+    const maximos = act.map((v) => Number(v.maximo)).filter((x) => x > 0);
+    const inversion = suma(actual, 'amount_spent'), mensajes = suma(actual, 'mensajes');
+    return [{
+      ventas: n, monto, ticket: n > 0 ? monto / n : null,
+      venta_max: maximos.length ? Math.max(...maximos) : null,
+      costo_venta: n > 0 ? inversion / n : null,
+      roas_real: inversion > 0 && monto > 0 ? monto / inversion : null,
+      tasa_cierre: mensajes > 0 && n > 0 ? (n * 100) / mensajes : null,
+      cambio_monto: montoAnt ? (monto - montoAnt) / montoAnt : null,
+      cambio_ventas: nAnt ? (n - nAnt) / nAnt : null,
+      desde: ra ? ra[0] : null, hasta: ra ? ra[1] : null,
+    }];
+  },
+});
+
+dash.calc('meta_mes', {
+  title: 'Avance de la meta del mes',
+  description: 'Ventas cargadas en el mes en curso (hasta hoy) frente a la meta del mes, y qué parte del mes ya pasó. En camino: el avance va igual o por delante del calendario; atento: entre 80 % y 100 % del ritmo; a mejorar: por debajo.',
+  inputs: ['ventas', 'metas'],
+  fn: (ventas, metas) => {
+    const hoy = new Date();
+    const mes = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0');
+    const diasMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).getDate();
+    const meta = metas.find((m) => m.id === mes || m.mes === mes) || null;
+    const delMes = ventas.filter((v) => typeof v.fecha === 'string' && v.fecha.slice(0, 7) === mes);
+    const vendido = delMes.reduce((t, v) => t + (Number(v.monto) || 0), 0);
+    const n = delMes.reduce((t, v) => t + (Number(v.ventas) || 0), 0);
+    const tiempo = hoy.getDate() / diasMes;
+    const metaMonto = meta && Number(meta.monto) > 0 ? Number(meta.monto) : null;
+    const metaVentas = meta && Number(meta.ventas) > 0 ? Number(meta.ventas) : null;
+    const avance = metaMonto ? vendido / metaMonto : null;
+    const ritmo = avance == null ? null : avance / tiempo;
+    const estado = ritmo == null ? null : ritmo >= 1 ? 'En camino' : ritmo >= 0.8 ? 'Atento' : 'A mejorar';
+    return [{mes, vendido, ventas: n, meta_monto: metaMonto, meta_ventas: metaVentas, avance, avance_ventas: metaVentas ? n / metaVentas : null, tiempo, estado}];
+  },
+});
+
+dash.calc('serie', {
+  title: 'Inversión, resultados y ventas por día',
+  description: 'Los días del período elegido con la inversión, las conversaciones y compras web de Meta, y lo vendido por WhatsApp que cargó el equipo.',
+  inputs: ['diario', 'ventas'],
+  fn: (diario, ventas) => {
+    const dias = ({last_7d: 7, last_14d: 14, last_30d: 30})[dash.params().periodo] || 30;
+    const porDia = new Map(ventas.filter((v) => typeof v.fecha === 'string').map((v) => [v.fecha, v]));
+    return diario.filter((r) => r.date_start).slice().sort((a, b) => (a.date_start < b.date_start ? -1 : 1)).slice(-dias)
+      .map((r) => {
+        const v = porDia.get(r.date_start);
+        return {fecha: r.date_start, inversion: Number(r.amount_spent) || 0, mensajes: Number(r.mensajes) || 0, compras: Number(r.omni_purchase) || 0, vendido: v ? Number(v.monto) || 0 : null};
+      });
+  },
+});
+
+dash.calc('destacado', {
+  title: 'Anuncio destacado',
+  description: 'Entre los anuncios con más inversión, el que más conversaciones o compras trajo; a igualdad, el de menor costo por resultado. La participación es su parte de esos resultados.',
+  inputs: ['anuncios'],
+  fn: (anuncios) => {
+    const validos = anuncios.filter((r) => r.resultados > 0 && r.tipo_resultado && /messaging_conversation_started|purchase/.test(r.tipo_resultado) && !/initiate_checkout/.test(r.tipo_resultado));
+    if (!validos.length) return [];
+    const total = validos.reduce((t, r) => t + r.resultados, 0);
+    const top = validos.slice().sort((a, b) => b.resultados - a.resultados || (a.costo_por_resultado || 0) - (b.costo_por_resultado || 0))[0];
+    return [{id: top.id, name: top.name, campaign_name: top.campaign_name, resultados: top.resultados, costo_por_resultado: top.costo_por_resultado,
+      amount_spent: top.amount_spent, ctr: top.ctr, participacion: total > 0 ? top.resultados / total : null}];
+  },
+});
+
+// ===== Formatos =====
+const C = (window.CLIENTE = {nombre: '—', tipo: 'mensajes', logo: null});
+const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const MESES_LARGOS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const nf0 = new Intl.NumberFormat('es-PY', {maximumFractionDigits: 0});
+const nf1 = new Intl.NumberFormat('es-PY', {minimumFractionDigits: 1, maximumFractionDigits: 1});
+const nf2 = new Intl.NumberFormat('es-PY', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const F = {
+  gs: (v) => '₲ ' + nf0.format(Math.round(v)),
+  n: (v) => nf0.format(Math.round(v)),
+  x: (v) => nf1.format(v) + 'x',
+  gsx: (v) => '₲ ' + nf1.format(v),
+  pct: (v) => nf2.format(v) + ' %',
+  pct1: (v) => nf1.format(v) + ' %',
+  frac: (v) => nf0.format(Math.round(v * 100)) + ' %',
+  uno: (v) => nf1.format(v),
+  cambio: (v) => (v > 0 ? '+' : '') + nf0.format(Math.round(v * 100)) + ' %',
+  fecha: (s) => { const d = d3.utcParse('%Y-%m-%d')(s); return d ? d.getUTCDate() + ' de ' + MESES[d.getUTCMonth()] + ' ' + d.getUTCFullYear() : '—'; },
+  corta: (v) => (v >= 1e6 ? nf1.format(v / 1e6) + ' M' : v >= 1e3 ? nf0.format(Math.round(v / 1e3)) + ' mil' : nf0.format(v)),
+};
+const ESTADOS = {ACTIVE: 'Activa', PAUSED: 'Pausada', CAMPAIGN_PAUSED: 'Campaña pausada', ADSET_PAUSED: 'Conjunto pausado', ARCHIVED: 'Archivada', DELETED: 'Eliminada', WITH_ISSUES: 'Con problemas', DISAPPROVED: 'Rechazada', PENDING_REVIEW: 'En revisión', IN_PROCESS: 'En proceso'};
+const tipoResultado = (ind) => {
+  if (!ind) return '—';
+  if (ind.includes('messaging_conversation_started')) return 'Conversaciones';
+  if (ind.includes('initiate_checkout')) return 'Pagos iniciados';
+  if (ind.includes('purchase')) return 'Compras web';
+  if (ind.includes('lead')) return 'Leads';
+  if (ind.includes('link_click')) return 'Clics';
+  return ind.split('.').pop().replace(/_/g, ' ');
+};
+const movimiento = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: no-preference)').matches);
+const filaDe = (src) => { const d = dash.data(src); return d.status === 'ok' && Array.isArray(d.data) && d.data[0] ? d.data[0] : null; };
+
+// Datos del cliente (nombre, tipo y logo) que llegan con el reporte
+const aplicarCliente = () => {
+  document.title = `${C.nombre} · Reporte de resultados · swipe digital`;
+  document.querySelectorAll('#nombre-cliente').forEach((e) => e.classList.toggle('cv-oculto', !!C.logo));
+  document.querySelectorAll('#logo-portada').forEach((e) => { e.hidden = !C.logo; });
+};
+
+// ===== Dibujos =====
+const valor = (name, src, campo, fmt) => dash.draw(name, (el) => {
+  const d = dash.data(src);
+  el.classList.toggle('dash-skeleton', d.status === 'loading');
+  const fila = filaDe(src);
+  const v = fila ? fila[campo] : null;
+  if (v == null || v === '') { el.textContent = '—'; return; }
+  if (el.classList.contains('cuenta') && movimiento && typeof v === 'number' && el.dataset.animado !== '1') {
+    el.dataset.animado = '1';
+    const t0 = performance.now();
+    const paso = (t) => { const p = Math.min(1, (t - t0) / 1100); el.textContent = fmt(v * (1 - Math.pow(1 - p, 3))); if (p < 1) requestAnimationFrame(paso); };
+    requestAnimationFrame(paso);
+    return;
+  }
+  el.textContent = fmt(v);
+});
+const cambio = (name, src, campo, sentido) => dash.draw(name, (el) => {
+  const fila = filaDe(src);
+  const v = fila ? fila[campo] : null;
+  el.textContent = v == null ? 'sin dato' : F.cambio(v);
+  const bueno = sentido === 'neutro' || v == null || Math.abs(v) < 0.005 ? null : (sentido === 'sube' ? v > 0 : v < 0);
+  el.className = bueno == null ? 'neu' : bueno ? 'ok' : 'mal';
+});
+const dibujarLogo = (el, alto, textoSiNo) => {
+  el.replaceChildren();
+  if (C.logo) { const i = document.createElement('img'); i.src = C.logo; i.alt = C.nombre; i.style.height = alto + 'px'; el.append(i); }
+  else if (textoSiNo) el.textContent = C.nombre;
+};
+
+dash.draw('logo-chico', (el) => dibujarLogo(el, 20, true));
+dash.draw('logo-grande', (el) => dibujarLogo(el, 72, false));
+dash.draw('cliente', (el) => { el.textContent = C.nombre; });
+dash.draw('mes-nombre', (el) => { el.textContent = MESES_LARGOS[new Date().getMonth()]; });
+valor('desde', 'kpis', 'desde', F.fecha); valor('hasta', 'kpis', 'hasta', F.fecha);
+valor('fr-roas', 'ventas_kpi', 'roas_real', F.gsx); valor('fr-cmsj', 'kpis', 'costo_mensaje', F.gs); valor('fr-roasweb', 'kpis', 'roas', F.gsx);
+
+valor('rb-vend', 'ventas_kpi', 'monto', F.gs); cambio('rb-vend-c', 'ventas_kpi', 'cambio_monto', 'sube');
+valor('rb-nv', 'ventas_kpi', 'ventas', F.n); cambio('rb-nv-c', 'ventas_kpi', 'cambio_ventas', 'sube');
+valor('rb-msj', 'kpis', 'mensajes', F.n); cambio('rb-msj-c', 'kpis', 'cambio_mensajes', 'sube');
+valor('rb-web', 'kpis', 'compras', F.n); cambio('rb-web-c', 'kpis', 'cambio_compras', 'sube');
+valor('rb-inv', 'kpis', 'inversion', F.gs); cambio('rb-inv-c', 'kpis', 'cambio_inversion', 'neutro');
+
+valor('v-roas', 'ventas_kpi', 'roas_real', F.x); valor('v-cpv', 'ventas_kpi', 'costo_venta', F.gs);
+valor('v-ticket', 'ventas_kpi', 'ticket', F.gs); valor('v-max', 'ventas_kpi', 'venta_max', F.gs); valor('v-cierre', 'ventas_kpi', 'tasa_cierre', F.pct1);
+
+valor('mm-vend', 'meta_mes', 'vendido', F.gs); valor('mm-vend2', 'meta_mes', 'vendido', F.gs); valor('mm-meta', 'meta_mes', 'meta_monto', F.gs);
+valor('mm-pct', 'meta_mes', 'avance', F.frac); valor('mm-tiempo', 'meta_mes', 'tiempo', F.frac);
+valor('mm-nv', 'meta_mes', 'ventas', F.n); valor('mm-nmeta', 'meta_mes', 'meta_ventas', F.n);
+
+valor('a-nom', 'destacado', 'name', String); valor('a-camp', 'destacado', 'campaign_name', String);
+valor('a-share', 'destacado', 'participacion', F.frac);
+valor('a-res', 'destacado', 'resultados', F.n); valor('a-cpr', 'destacado', 'costo_por_resultado', F.gs);
+valor('a-inv', 'destacado', 'amount_spent', F.gs); valor('a-ctr', 'destacado', 'ctr', F.pct);
+
+dash.draw('semaforo', (el) => {
+  const f = filaDe('meta_mes');
+  const e = f ? f.estado : null;
+  el.textContent = e || 'Sin meta definida';
+  el.className = 'cv-semaforo' + (e === 'En camino' ? ' bien' : e === 'Atento' ? ' atento' : e === 'A mejorar' ? ' mejorar' : '');
+});
+
+dash.draw('anillo', (el) => {
+  const f = filaDe('meta_mes');
+  el.replaceChildren();
+  const avance = f && f.avance != null ? f.avance : null;
+  const tiempo = f ? f.tiempo : 0;
+  const R = 86, L = 2 * Math.PI * R;
+  const svg = d3.select(el).append('svg').attr('viewBox', '0 0 200 200').attr('role', 'img')
+    .attr('aria-label', avance == null ? 'Sin meta definida para este mes' : `Avance de la meta del mes: ${F.frac(avance)}`);
+  const defs = svg.append('defs').append('linearGradient').attr('id', 'grad-meta').attr('x1', '0').attr('y1', '0').attr('x2', '1').attr('y2', '1');
+  defs.append('stop').attr('offset', '0').style('stop-color', '#9B72FF');
+  defs.append('stop').attr('offset', '1').style('stop-color', 'var(--cl)');
+  svg.append('circle').attr('cx', 100).attr('cy', 100).attr('r', R).attr('fill', 'none').attr('stroke', '#24242A').attr('stroke-width', 14);
+  if (avance != null) {
+    const arco = svg.append('circle').attr('cx', 100).attr('cy', 100).attr('r', R).attr('fill', 'none').attr('stroke', 'url(#grad-meta)')
+      .attr('stroke-width', 14).attr('stroke-linecap', 'round').attr('transform', 'rotate(-90 100 100)')
+      .attr('stroke-dasharray', `${L} ${L}`);
+    const fin = L * (1 - Math.min(1, avance));
+    if (movimiento && el.dataset.animado !== '1') { el.dataset.animado = '1'; arco.attr('stroke-dashoffset', L).transition().duration(1200).ease(d3.easeCubicOut).attr('stroke-dashoffset', fin); }
+    else arco.attr('stroke-dashoffset', fin);
+    const ang = tiempo * 2 * Math.PI - Math.PI / 2;
+    svg.append('line').attr('x1', 100 + (R - 13) * Math.cos(ang)).attr('y1', 100 + (R - 13) * Math.sin(ang)).attr('x2', 100 + (R + 13) * Math.cos(ang)).attr('y2', 100 + (R + 13) * Math.sin(ang))
+      .attr('stroke', '#FFFFFF').attr('stroke-width', 2).attr('opacity', 0.7);
+  }
+  const c = document.createElement('div'); c.className = 'centro';
+  const p = document.createElement('div'); p.className = 'pct'; p.textContent = avance == null ? '—' : F.frac(avance);
+  const s = document.createElement('div'); s.className = 'sub'; s.textContent = avance == null ? 'sin meta' : 'de la meta';
+  c.append(p, s); el.append(c);
+});
+
+dash.draw('barra-ventas', (el) => {
+  const f = filaDe('meta_mes');
+  el.replaceChildren();
+  if (!f || f.avance_ventas == null) return;
+  const i = document.createElement('i'); i.style.width = Math.min(100, f.avance_ventas * 100) + '%';
+  const b = document.createElement('b'); b.style.left = Math.min(100, f.tiempo * 100) + '%'; b.title = 'Parte del mes transcurrida';
+  el.append(i, b);
+});
+
+dash.draw('embudo', (el) => {
+  const k = dash.data('kpis'), v = dash.data('ventas_kpi');
+  el.classList.toggle('dash-skeleton', k.status === 'loading');
+  el.replaceChildren();
+  const fk = filaDe('kpis'), fv = filaDe('ventas_kpi');
+  if (k.status === 'error') { const d = document.createElement('div'); d.className = 'cv-empty'; d.textContent = 'No se pudo cargar el recorrido.'; el.append(d); return; }
+  if (!fk) { el.textContent = '—'; return; }
+  const etapas = [
+    {t: 'Personas alcanzadas', v: fk.alcance},
+    {t: 'Clics para saber más', v: fk.clics_enlace},
+    {t: 'Conversaciones de WhatsApp', v: fk.mensajes},
+    {t: 'Ventas cerradas', v: fv ? fv.ventas : null},
+  ];
+  const tasas = ['hizo clic', 'escribió por WhatsApp', 'compró'];
+  const W = Math.max(320, el.clientWidth || 800);
+  const angosto = W < 620;
+  const filaH = angosto ? 74 : 70, gap = angosto ? 34 : 30, H = etapas.length * filaH + (etapas.length - 1) * gap;
+  const etqW = angosto ? 0 : 250;
+  const anchoMax = W - etqW - (angosto ? 0 : 20);
+  const base = etapas[0].v || 1;
+  const ancho = (x) => (x == null ? 0.12 : Math.max(0.12, Math.pow(Math.max(0, x) / base, 0.32))) * anchoMax;
+  const svg = d3.select(el).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img')
+    .attr('aria-label', 'Embudo: ' + etapas.map((e) => `${e.t} ${e.v == null ? 'sin dato' : F.n(e.v)}`).join(', '));
+  const grad = svg.append('defs').append('linearGradient').attr('id', 'grad-embudo').attr('x1', '0').attr('x2', '1');
+  grad.append('stop').attr('offset', '0').style('stop-color', '#9B72FF');
+  grad.append('stop').attr('offset', '1').style('stop-color', 'var(--cl)');
+  etapas.forEach((e, i) => {
+    const y = i * (filaH + gap);
+    const w = ancho(e.v), x0 = etqW + (anchoMax - w) / 2;
+    const g = svg.append('g');
+    const ultimo = i === etapas.length - 1;
+    g.append('rect').attr('x', x0).attr('y', y).attr('width', w).attr('height', filaH).attr('rx', 14)
+      .attr('fill', ultimo ? 'url(#grad-embudo)' : '#1C1A24').attr('stroke', ultimo ? 'none' : '#2E2A3A');
+    const cx = etqW + anchoMax / 2;
+    g.append('text').attr('class', 'num').attr('x', cx).attr('y', y + filaH / 2 + (angosto ? -4 : 9)).attr('text-anchor', 'middle')
+      .style('font-size', angosto ? '24px' : '28px').style('fill', ultimo ? '#0A0A0B' : '#FFFFFF').text(e.v == null ? '—' : F.n(e.v));
+    if (angosto) g.append('text').attr('class', 'etq').attr('x', cx).attr('y', y + filaH / 2 + 18).attr('text-anchor', 'middle').style('fill', ultimo ? '#0A0A0B' : '#B9B9C0').text(e.t);
+    else g.append('text').attr('class', 'etq').attr('x', 0).attr('y', y + filaH / 2 + 4).text(e.t);
+    if (i < etapas.length - 1) {
+      const a = e.v, b = etapas[i + 1].v;
+      const t = a > 0 && b != null ? (b / a) * 100 : null;
+      g.append('text').attr('class', 'tasa').attr('x', cx).attr('y', y + filaH + gap / 2 + 5).attr('text-anchor', 'middle')
+        .text(t == null ? '↓' : `↓  ${F.pct1(t)} ${tasas[i]}`);
+    }
+  });
+});
+
+dash.draw('grafico', (el) => {
+  const s = dash.data('serie');
+  el.classList.toggle('dash-skeleton', s.status === 'loading');
+  el.replaceChildren();
+  const vacio = (t) => { const d = document.createElement('div'); d.className = 'cv-empty'; d.textContent = t; el.append(d); };
+  if (s.status === 'error') return vacio('No se pudo cargar la evolución diaria.');
+  if (s.status !== 'ok' || !s.data) { el.textContent = '—'; return; }
+  const parse = d3.utcParse('%Y-%m-%d');
+  const campo = C.tipo === 'ventas' ? 'compras' : 'mensajes';
+  const nomRes = C.tipo === 'ventas' ? 'Compras web' : 'Conversaciones';
+  const rows = s.data.map((r) => ({fecha: r.fecha, f: parse(r.fecha), inv: r.inversion, res: r[campo], vend: r.vendido})).filter((r) => r.f);
+  if (!rows.length || !d3.sum(rows, (r) => r.inv)) return vacio('No hubo inversión en este período.');
+  const W = Math.max(300, el.clientWidth || 600), H = 290;
+  const yI = d3.scaleLinear().domain([0, d3.max(rows, (r) => Math.max(r.inv, r.vend || 0)) || 1]).nice();
+  const yR = d3.scaleLinear().domain([0, d3.max(rows, (r) => r.res) || 1]).nice();
+  const ticksI = yI.ticks(4), ticksR = yR.ticks(4).filter(Number.isInteger);
+  const ancho = (arr, fmt) => d3.max(arr, (v) => fmt(v).length) * 7 + 14;
+  const m = {t: 14, r: Math.max(30, ancho(ticksR, F.n)), b: 30, l: Math.max(44, ancho(ticksI, F.corta))};
+  yI.range([H - m.b, m.t]); yR.range([H - m.b, m.t]);
+  const x = d3.scaleBand().domain(rows.map((r) => r.fecha)).range([m.l, W - m.r]).padding(rows.length > 20 ? 0.22 : 0.35);
+  const cxr = (r) => x(r.fecha) + x.bandwidth() / 2;
+  const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`)
+    .attr('role', 'img').attr('aria-label', `Inversión diaria en barras, lo vendido por WhatsApp y ${nomRes.toLowerCase()} por día en líneas`);
+  svg.append('g').selectAll('line').data(ticksI).join('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', (d) => yI(d)).attr('y2', (d) => yI(d)).attr('stroke', '#1F1F24');
+  svg.append('g').attr('transform', `translate(${m.l},0)`).call(d3.axisLeft(yI).tickValues(ticksI).tickFormat(F.corta).tickSize(0).tickPadding(8)).call((g) => g.select('.domain').remove());
+  svg.append('g').attr('transform', `translate(${W - m.r},0)`).call(d3.axisRight(yR).tickValues(ticksR).tickFormat(F.n).tickSize(0).tickPadding(8)).call((g) => g.select('.domain').remove());
+  const cada = Math.max(1, Math.ceil(rows.length / Math.max(2, Math.floor((W - m.l - m.r) / 64))));
+  svg.append('g').attr('transform', `translate(0,${H - m.b})`)
+    .call(d3.axisBottom(x).tickValues(rows.filter((r, i) => i % cada === 0).map((r) => r.fecha))
+      .tickFormat((t) => { const d = parse(t); return d.getUTCDate() + ' ' + MESES[d.getUTCMonth()]; }).tickSize(0).tickPadding(10))
+    .call((g) => g.select('.domain').attr('stroke', '#232328'));
+  svg.append('g').selectAll('rect').data(rows).join('rect')
+    .attr('x', (r) => x(r.fecha)).attr('width', x.bandwidth()).attr('y', (r) => yI(r.inv)).attr('height', (r) => Math.max(0, yI(0) - yI(r.inv)))
+    .attr('rx', Math.min(3, x.bandwidth() / 3)).attr('fill', '#9B72FF').attr('opacity', 0.85);
+  svg.append('path').datum(rows).attr('d', d3.line().x(cxr).y((r) => yR(r.res))).attr('fill', 'none').attr('stroke', '#FFFFFF').attr('stroke-width', 1.6).attr('opacity', 0.8);
+  const conVenta = rows.filter((r) => r.vend != null);
+  if (conVenta.length) {
+    svg.append('path').datum(rows).attr('d', d3.line().defined((r) => r.vend != null).x(cxr).y((r) => yI(r.vend))).attr('fill', 'none').style('stroke', 'var(--cl)').attr('stroke-width', 2.6);
+    svg.append('g').selectAll('circle').data(conVenta).join('circle').attr('cx', cxr).attr('cy', (r) => yI(r.vend)).attr('r', 3.4).style('fill', 'var(--cl)');
+  }
+  const tip = document.createElement('div'); tip.className = 'cv-tip'; tip.hidden = true; el.append(tip);
+  const foco = svg.append('rect').attr('fill', 'rgba(255,255,255,0.05)').attr('y', m.t).attr('height', H - m.t - m.b).attr('width', x.step()).style('display', 'none');
+  svg.append('g').selectAll('rect').data(rows).join('rect')
+    .attr('x', (r) => x(r.fecha) - (x.step() - x.bandwidth()) / 2).attr('width', x.step()).attr('y', m.t).attr('height', H - m.t - m.b).attr('fill', 'transparent')
+    .on('pointerenter', (ev, r) => {
+      foco.style('display', null).attr('x', x(r.fecha) - (x.step() - x.bandwidth()) / 2);
+      tip.replaceChildren();
+      const lineas = [['t', F.fecha(r.fecha)], ['', 'Inversión: ' + F.gs(r.inv)], ['', 'Vendido: ' + (r.vend == null ? 'sin cargar' : F.gs(r.vend))], ['', nomRes + ': ' + F.n(r.res)]];
+      for (const [c, t] of lineas) { const d = document.createElement('div'); if (c) d.className = c; d.textContent = t; tip.append(d); }
+      tip.hidden = false;
+      const esc = el.clientWidth / W, tw = tip.offsetWidth;
+      tip.style.left = Math.min(Math.max(0, cxr(r) * esc - tw / 2), el.clientWidth - tw) + 'px';
+      tip.style.top = Math.max(0, Math.min(yI(r.inv), r.vend != null ? yI(r.vend) : H) * esc - tip.offsetHeight - 10) + 'px';
+    })
+    .on('pointerleave', () => { tip.hidden = true; foco.style('display', 'none'); });
+});
+
+// ===== Tablas =====
+const celda = (tr, texto, clase) => { const td = document.createElement('td'); if (clase) td.className = clase; td.textContent = texto; tr.append(td); return td; };
+const filaMensaje = (tb, cols, texto) => { const tr = document.createElement('tr'); const td = celda(tr, texto, 'msg'); td.colSpan = cols; tb.append(tr); };
+const estado = (tr, st) => { const td = document.createElement('td'); const sp = document.createElement('span'); sp.className = 'cv-pill' + (st === 'ACTIVE' ? ' on' : ''); sp.textContent = ESTADOS[st] || st || '—'; td.append(sp); tr.append(td); };
+
+dash.draw('tb-anuncios', (tb) => {
+  const c = dash.data('anuncios');
+  tb.replaceChildren();
+  if (c.status === 'error') return filaMensaje(tb, 6, 'No se pudieron cargar los anuncios.');
+  if (c.status !== 'ok') return filaMensaje(tb, 6, 'Cargando anuncios…');
+  if (!c.data.length) return filaMensaje(tb, 6, 'Sin anuncios con inversión en este período.');
+  for (const r of c.data) {
+    const tr = document.createElement('tr'); tr.dataset.key = r.id;
+    celda(tr, r.name || '—', 'nom'); estado(tr, r.effective_status);
+    celda(tr, r.amount_spent == null ? '—' : F.gs(r.amount_spent), 'n');
+    celda(tr, r.resultados == null ? '—' : F.n(r.resultados), 'n');
+    celda(tr, r.costo_por_resultado == null ? '—' : F.gs(r.costo_por_resultado), 'n');
+    celda(tr, r.ctr == null ? '—' : F.pct(r.ctr), 'n');
+    tb.append(tr);
+  }
+});
+
+dash.draw('tb-campanas', (tb) => {
+  const c = dash.data('campanas');
+  tb.replaceChildren();
+  if (c.status === 'error') return filaMensaje(tb, 6, 'No se pudieron cargar las campañas.');
+  if (c.status !== 'ok') return filaMensaje(tb, 6, 'Cargando campañas…');
+  if (!c.data.length) return filaMensaje(tb, 6, 'Sin campañas con inversión en este período.');
+  for (const r of c.data) {
+    const tr = document.createElement('tr'); tr.dataset.key = r.id;
+    celda(tr, r.name || '—', 'nom'); estado(tr, r.effective_status);
+    celda(tr, r.amount_spent == null ? '—' : F.gs(r.amount_spent), 'n');
+    celda(tr, r.resultados == null ? '—' : F.n(r.resultados), 'n');
+    celda(tr, tipoResultado(r.tipo_resultado), 'sub');
+    celda(tr, r.costo_por_resultado == null ? '—' : F.gs(r.costo_por_resultado), 'n');
+    tb.append(tr);
+  }
+});
+
+// ===== Controles y qué se muestra =====
+document.querySelectorAll('#sel-periodo').forEach((s) => s.addEventListener('change', () => dash.setParams({periodo: s.value})));
+dash.onData(() => {
+  const p = dash.params();
+  document.querySelectorAll('#sel-periodo').forEach((s) => { if (document.activeElement !== s && p.periodo) s.value = p.periodo; });
+  document.querySelectorAll('.cv [data-tipo]').forEach((e) => { e.hidden = e.dataset.tipo !== C.tipo; });
+  const fk = filaDe('kpis'), fv = filaDe('ventas_kpi'), fm = filaDe('meta_mes');
+  let frase = null;
+  if (fk && !(fk.inversion > 0)) frase = 'vacio';
+  else if (fv && fv.roas_real != null) frase = 'roas';
+  else if (C.tipo === 'ventas' && fk && fk.roas > 0) frase = 'web';
+  else if (fk && fk.costo_mensaje != null) frase = 'mensajes';
+  document.querySelectorAll('.cv [data-frase]').forEach((e) => { e.hidden = e.dataset.frase !== frase; });
+  const conMeta = !!(fm && fm.meta_monto);
+  document.querySelectorAll('.cv [data-con-meta]').forEach((e) => { e.hidden = !conMeta; });
+  document.querySelectorAll('.cv [data-con-meta-n]').forEach((e) => { e.hidden = !(fm && fm.meta_ventas); });
+  document.querySelectorAll('.cv [data-sin-meta]').forEach((e) => { e.hidden = conMeta || !fm; });
+  const d = dash.data('destacado');
+  document.querySelectorAll('#anuncio-estrella').forEach((e) => { e.hidden = d.status === 'ok' && Array.isArray(d.data) && d.data.length === 0; });
+});
+
+// ===== Carga de datos =====
+const codigo = (() => {
+  const q = new URLSearchParams(location.search).get('t');
+  if (q) return q;
+  const partes = location.pathname.split('/').filter(Boolean);
+  return partes[0] === 'r' ? partes[1] : null;
+})();
+const avisar = (texto) => document.querySelectorAll('#aviso').forEach((e) => { e.textContent = texto || ''; e.hidden = !texto; });
+const META = ['diario', 'resumen', 'campanas', 'anuncios'];
+
+window.cargarDatos = async () => {
+  const periodo = dash.params().periodo;
+  META.forEach((id) => dash.poner(id, {status: 'loading', data: []}));
+  dash.dibujar();
+  try {
+    const r = await fetch(`/api/reporte?t=${encodeURIComponent(codigo || '')}&periodo=${periodo}`);
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || 'No se pudo cargar el reporte.');
+    if (periodo !== dash.params().periodo) return;
+    Object.assign(C, {nombre: j.cliente.nombre, tipo: j.cliente.tipo, logo: j.cliente.logo || null});
+    aplicarCliente();
+    META.forEach((id) => dash.poner(id, {status: 'ok', data: j[id] || []}));
+    avisar('');
+  } catch (e) {
+    META.forEach((id) => dash.poner(id, {status: 'error', data: []}));
+    avisar(e.message);
+  }
+  dash.dibujar();
+};
+
+const cargarVentas = async () => {
+  try {
+    const r = await fetch(`/api/ventas?t=${encodeURIComponent(codigo || '')}`);
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || 'No se pudieron cargar las ventas.');
+    dash.poner('ventas', {status: 'ok', data: j.ventas || []});
+    dash.poner('metas', {status: 'ok', data: j.metas || []});
+  } catch (e) {
+    dash.poner('ventas', {status: 'error', data: []});
+    dash.poner('metas', {status: 'error', data: []});
+  }
+  dash.dibujar();
+};
+
+if (!codigo) avisar('Este link de reporte no es válido. Pedile a swipe digital el link correcto.');
+else { window.cargarDatos(); cargarVentas(); }
