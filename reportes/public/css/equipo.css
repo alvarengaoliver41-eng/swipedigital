@@ -1,0 +1,21 @@
+.eq{min-height:100vh}
+.eq-login{padding-top:clamp(48px,8vw,96px);max-width:620px}
+.eq-form-login{grid-template-columns:1fr 1fr;margin-top:24px}
+@media (max-width:520px){.eq-form-login{grid-template-columns:1fr}}
+.eq-usuario{font-size:12px;color:var(--gris)}
+.cv-btn.sec{background:transparent;color:#FFFFFF;border:1px solid var(--borde)}
+.eq-clientes{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.eq-cli{background:var(--grafito);border:1px solid var(--borde);border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:12px}
+.eq-cli.inactivo{opacity:.55}
+.eq-cli .top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.eq-cli .nom{font-family:'SW Montserrat',Montserrat,sans-serif;font-weight:800;font-size:22px;letter-spacing:-0.03em}
+.eq-cli .tipo{font-family:'SW Mono','JetBrains Mono',monospace;font-size:10.5px;letter-spacing:1.3px;text-transform:uppercase;color:var(--gris)}
+.eq-cli .cifra{font-size:14px;color:var(--texto2)}
+.eq-cli .cifra b{color:#FFFFFF;font-weight:600}
+.eq-cli .acc{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:auto}
+.eq-cli .acc button,.eq-cli .acc a{background:none;border:0;padding:0;color:var(--violeta-txt);font:inherit;font-size:13px;cursor:pointer;text-decoration:none}
+.eq-sel-cliente{font-size:inherit!important;font-family:'SW Montserrat',Montserrat,sans-serif!important;font-weight:800!important;padding:4px 40px 6px 16px!important;vertical-align:middle;letter-spacing:-0.03em}
+.eq-select{background:var(--grafito);border:1px solid var(--borde);border-radius:10px;padding:10px 12px;color:#FFFFFF;font-family:'SW Inter',Inter,system-ui,sans-serif;font-size:14px;letter-spacing:0;text-transform:none}
+.eq-check{flex-direction:row!important;align-items:center;gap:10px!important;text-transform:none!important;letter-spacing:0!important;font-size:14px!important;color:var(--texto2)!important;font-family:'SW Inter',Inter,sans-serif!important}
+.eq-check input{width:18px;height:18px;accent-color:var(--violeta)}
+.cv-form select{min-width:0}

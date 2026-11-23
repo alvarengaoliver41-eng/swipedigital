@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Reporte de resultados · swipe digital</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/css/fuentes.css">
+<link rel="stylesheet" href="/css/estilo.css">
+</head>
+<body>
+<div class="cv" id="reporte-cliente">
+  <header class="cv-top cv-wrap" id="cabecera">
+    <div class="cv-cobrand">
+      <span class="cv-logo" aria-label="swipe digital"><span class="s cv-disp">swipe</span><span class="tm">™</span><span class="d cv-disp">digital</span></span>
+      <span class="cv-x" aria-hidden="true">×</span>
+      <span class="cv-clogo" data-draw="logo-chico"></span>
+    </div>
+    <div class="cv-top-r">
+      <span class="cv-label cv-mono">Reporte de resultados</span>
+      <select class="cv-select" id="sel-periodo" aria-label="Período">
+        <option value="last_7d">Últimos 7 días</option>
+        <option value="last_14d">Últimos 14 días</option>
+        <option value="last_30d" selected>Últimos 30 días</option>
+      </select>
+    </div>
+  </header>
+
+  <p class="cv-aviso" id="aviso" hidden></p>
+
+  <section class="cv-cover cv-wrap" id="portada">
+    <div class="cv-cover-id">
+      <div class="cv-logo-grande" id="logo-portada" data-draw="logo-grande"></div>
+      <div>
+        <div class="cv-label cv-mono">Meta Ads <span class="cv-acc">●</span> Facebook e Instagram <span class="cv-acc">●</span> WhatsApp</div>
+        <h1 class="cv-cliente cv-disp" id="nombre-cliente" data-draw="cliente">—</h1>
+      </div>
+    </div>
+    <div class="cv-rango cv-mono">Del <span data-draw="desde" data-source="kpis" data-field="desde" data-row="0">—</span> al <span data-draw="hasta" data-source="kpis" data-field="hasta" data-row="0">—</span></div>
+
+    <p class="cv-frase cv-disp" data-frase="roas" id="frase-retorno" hidden>Cada <span class="cl">₲ 1</span> invertido en anuncios volvió como <span class="cl" data-draw="fr-roas" data-source="ventas_kpi" data-field="roas_real" data-row="0">—</span> en ventas.</p>
+    <p class="cv-frase cv-disp" data-frase="mensajes" id="frase-conversacion" hidden>Cada conversación de WhatsApp costó <span class="cl" data-draw="fr-cmsj" data-source="kpis" data-field="costo_mensaje" data-row="0">—</span>.</p>
+    <p class="cv-frase cv-disp" data-frase="web" id="frase-web" hidden>Cada <span class="cl">₲ 1</span> invertido en anuncios volvió como <span class="cl" data-draw="fr-roasweb" data-source="kpis" data-field="roas" data-row="0">—</span> en compras web.</p>
+    <p class="cv-frase cv-disp" data-frase="vacio" id="frase-vacia" hidden>En este período no hubo inversión en anuncios.</p>
+
+    <div class="cv-ribbon" id="cifras-portada">
+      <div class="cv-rb dest" id="rb-vendido"><div class="lbl cv-mono">Vendido por WhatsApp</div><div class="v cv-disp cuenta" data-draw="rb-vend" data-source="ventas_kpi" data-field="monto" data-row="0">—</div><div class="cv-chg cv-mono"><span data-draw="rb-vend-c" data-source="ventas_kpi" data-field="cambio_monto" data-row="0">—</span> vs. anterior</div></div>
+      <div class="cv-rb" id="rb-ventas"><div class="lbl cv-mono">Ventas cerradas</div><div class="v cv-disp cuenta" data-draw="rb-nv" data-source="ventas_kpi" data-field="ventas" data-row="0">—</div><div class="cv-chg cv-mono"><span data-draw="rb-nv-c" data-source="ventas_kpi" data-field="cambio_ventas" data-row="0">—</span> vs. anterior</div></div>
+      <div class="cv-rb" data-tipo="mensajes" id="rb-conversaciones"><div class="lbl cv-mono">Conversaciones</div><div class="v cv-disp cuenta" data-draw="rb-msj" data-source="kpis" data-field="mensajes" data-row="0">—</div><div class="cv-chg cv-mono"><span data-draw="rb-msj-c" data-source="kpis" data-field="cambio_mensajes" data-row="0">—</span> vs. anterior</div></div>
+      <div class="cv-rb" data-tipo="ventas" id="rb-compras-web" hidden><div class="lbl cv-mono">Compras web</div><div class="v cv-disp cuenta" data-draw="rb-web" data-source="kpis" data-field="compras" data-row="0">—</div><div class="cv-chg cv-mono"><span data-draw="rb-web-c" data-source="kpis" data-field="cambio_compras" data-row="0">—</span> vs. anterior</div></div>
+      <div class="cv-rb" id="rb-inversion"><div class="lbl cv-mono">Inversión en anuncios</div><div class="v cv-disp cuenta" data-draw="rb-inv" data-source="kpis" data-field="inversion" data-row="0">—</div><div class="cv-chg cv-mono"><span data-draw="rb-inv-c" data-source="kpis" data-field="cambio_inversion" data-row="0">—</span> vs. anterior</div></div>
+    </div>
+  </section>
+
+  <section class="cv-sec cv-wrap" id="meta-mes">
+    <div class="cv-head"><div><div class="cv-label cv-mono"><span class="cv-num">01</span>Meta del mes</div><h2 class="cv-h2 cv-disp">Cómo vamos con la meta de <span class="c" data-draw="mes-nombre">—</span></h2></div><p class="cv-intro">La meta de ventas se define a principio de mes y se compara con lo que va del mes, día por día.</p></div>
+    <div class="cv-meta" id="panel-meta">
+      <div class="cv-ring" id="anillo-meta" data-draw="anillo" data-source="meta_mes"></div>
+      <div>
+        <span class="cv-semaforo" id="semaforo" data-draw="semaforo" data-source="meta_mes" data-field="estado" data-row="0">—</span>
+        <div data-con-meta id="meta-detalle">
+          <p class="cv-meta-big">Vendido <b data-draw="mm-vend" data-source="meta_mes" data-field="vendido" data-row="0">—</b> de <b data-draw="mm-meta" data-source="meta_mes" data-field="meta_monto" data-row="0">—</b></p>
+          <p class="cv-meta-sub">Va <b data-draw="mm-pct" data-source="meta_mes" data-field="avance" data-row="0">—</b> de la meta con <b data-draw="mm-tiempo" data-source="meta_mes" data-field="tiempo" data-row="0">—</b> del mes transcurrido.</p>
+        </div>
+        <div class="cv-meta-n" data-con-meta-n id="meta-cantidad">
+          <div class="lbl"><b data-draw="mm-nv" data-source="meta_mes" data-field="ventas" data-row="0">—</b> de <b data-draw="mm-nmeta" data-source="meta_mes" data-field="meta_ventas" data-row="0">—</b> ventas</div>
+          <div class="cv-bar" data-draw="barra-ventas" data-source="meta_mes"></div>
+        </div>
+        <p class="cv-meta-sub" data-sin-meta id="meta-vacia" hidden>Todavía no se definió la meta de este mes. Este mes se vendió <b data-draw="mm-vend2" data-source="meta_mes" data-field="vendido" data-row="0">—</b> hasta ahora.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="cv-sec cv-wrap" id="ventas-whatsapp">
+    <div class="cv-head"><div><div class="cv-label cv-mono"><span class="cv-num">02</span>Ventas confirmadas</div><h2 class="cv-h2 cv-disp">Lo que se <span class="c">vendió por WhatsApp</span></h2></div><p class="cv-intro">Ventas cerradas en los chats que generaron los anuncios, según lo que reporta el equipo de ventas cada día.</p></div>
+    <div class="cv-vgrid">
+      <div class="cv-vcard dest" id="v-retorno"><div class="lbl cv-mono">Retorno real</div><div class="v cv-disp" data-draw="v-roas" data-source="ventas_kpi" data-field="roas_real" data-row="0">—</div><div class="h">guaraníes vendidos por cada guaraní invertido</div></div>
+      <div class="cv-vcard" id="v-costo"><div class="lbl cv-mono">Costo por venta</div><div class="v cv-disp" data-draw="v-cpv" data-source="ventas_kpi" data-field="costo_venta" data-row="0">—</div><div class="h">inversión dividida por las ventas</div></div>
+      <div class="cv-vcard" id="v-ticket"><div class="lbl cv-mono">Ticket promedio</div><div class="v cv-disp" data-draw="v-ticket" data-source="ventas_kpi" data-field="ticket" data-row="0">—</div><div class="h">monto vendido por venta</div></div>
+      <div class="cv-vcard" id="v-maxima"><div class="lbl cv-mono">Venta más alta</div><div class="v cv-disp" data-draw="v-max" data-source="ventas_kpi" data-field="venta_max" data-row="0">—</div><div class="h">la mayor venta del período</div></div>
+      <div class="cv-vcard" id="v-cierre"><div class="lbl cv-mono">Cierre en el chat</div><div class="v cv-disp" data-draw="v-cierre" data-source="ventas_kpi" data-field="tasa_cierre" data-row="0">—</div><div class="h">de las conversaciones terminaron en venta</div></div>
+    </div>
+  </section>
+
+  <section class="cv-sec cv-wrap" id="recorrido">
+    <div class="cv-head"><div><div class="cv-label cv-mono"><span class="cv-num">03</span>El recorrido</div><h2 class="cv-h2 cv-disp">Del anuncio <span class="c">a la venta</span></h2></div><p class="cv-intro">Cuántas personas vieron los anuncios, cuántas se interesaron, cuántas escribieron y cuántas compraron.</p></div>
+    <div class="cv-embudo" id="embudo" data-draw="embudo" data-source="kpis ventas_kpi"></div>
+    <p class="cv-vnota">El ancho de cada etapa está comprimido para que se vean todas. Los números son los reales.</p>
+  </section>
+
+  <section class="cv-sec cv-wrap" id="dia-a-dia">
+    <div class="cv-head"><div><div class="cv-label cv-mono"><span class="cv-num">04</span>Día a día</div><h2 class="cv-h2 cv-disp">Lo invertido y lo que volvió</h2></div><p class="cv-intro">Barras: inversión diaria. Línea de color: lo vendido por WhatsApp ese día. Línea blanca: <span data-tipo="mensajes">conversaciones</span><span data-tipo="ventas" hidden>compras web</span>.</p></div>
+    <div class="cv-chartbox">
+      <div class="cv-legend cv-mono"><span><i style="background:#9B72FF"></i>Inversión (₲)</span><span><i class="l" style="background:var(--cl)"></i>Vendido (₲)</span><span><i class="l" style="background:#FFFFFF"></i><span data-tipo="mensajes">Conversaciones</span><span data-tipo="ventas" hidden>Compras web</span></span></div>
+      <div class="cv-chart" id="grafico-diario" data-source="serie" data-draw="grafico"></div>
+    </div>
+  </section>
+
+  <section class="cv-sec cv-wrap" id="destacado">
+    <div class="cv-head"><div><div class="cv-label cv-mono"><span class="cv-num">05</span>Creatividades</div><h2 class="cv-h2 cv-disp">El anuncio que <span class="v">mejor funcionó</span></h2></div></div>
+    <div class="cv-star" id="anuncio-estrella">
+      <div class="cv-star-l">
+        <span class="badge cv-mono">Anuncio destacado</span>
+        <div class="nom cv-disp" data-draw="a-nom" data-source="destacado" data-field="name" data-row="0">—</div>
+        <div class="camp cv-mono" data-draw="a-camp" data-source="destacado" data-field="campaign_name" data-row="0">—</div>
+        <p class="share">Trajo el <b data-draw="a-share" data-source="destacado" data-field="participacion" data-row="0">—</b> de los resultados de los anuncios con más inversión.</p>
+      </div>
+      <div class="cv-star-r">
+        <div><div class="cv-label cv-mono">Resultados</div><div class="v cv-disp" data-draw="a-res" data-source="destacado" data-field="resultados" data-row="0">—</div></div>
+        <div><div class="cv-label cv-mono">Costo por resultado</div><div class="v cv-disp" data-draw="a-cpr" data-source="destacado" data-field="costo_por_resultado" data-row="0">—</div></div>
+        <div><div class="cv-label cv-mono">Inversión</div><div class="v cv-disp" data-draw="a-inv" data-source="destacado" data-field="amount_spent" data-row="0">—</div></div>
+        <div><div class="cv-label cv-mono">CTR</div><div class="v cv-disp" data-draw="a-ctr" data-source="destacado" data-field="ctr" data-row="0">—</div></div>
+      </div>
+    </div>
+    <div class="cv-tablewrap">
+      <table class="cv-table" id="tabla-anuncios" data-source="anuncios" data-row-key="id">
+        <thead><tr><th data-field="name">Anuncio</th><th data-field="effective_status">Estado</th><th class="n" data-field="amount_spent">Inversión</th><th class="n" data-field="resultados">Resultados</th><th class="n" data-field="costo_por_resultado">Costo por resultado</th><th class="n" data-field="ctr">CTR</th></tr></thead>
+        <tbody data-draw="tb-anuncios"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="cv-sec cv-wrap" id="campanas">
+    <div class="cv-head"><div><div class="cv-label cv-mono"><span class="cv-num">06</span>Campañas</div><h2 class="cv-h2 cv-disp">Dónde se invirtió</h2></div></div>
+    <div class="cv-tablewrap">
+      <table class="cv-table" id="tabla-campanas" data-source="campanas" data-row-key="id">
+        <thead><tr><th data-field="name">Campaña</th><th data-field="effective_status">Estado</th><th class="n" data-field="amount_spent">Inversión</th><th class="n" data-field="resultados">Resultados</th><th data-field="tipo_resultado">Tipo</th><th class="n" data-field="costo_por_resultado">Costo por resultado</th></tr></thead>
+        <tbody data-draw="tb-campanas"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="cv-equipo" id="lectura-equipo">
+    <div class="cv-wrap">
+      <div class="cv-label cv-mono">07 · Lectura del equipo</div>
+      <h2 class="cv-h2 cv-disp">Lo que vemos y lo que <span class="v">hacemos ahora</span></h2>
+      <div class="cv-notas">
+        <div class="cv-nota" id="nota-hicimos" data-read lang="es"><div class="k cv-mono">Lo que hicimos</div><h3>[Título corto]</h3><p>[Qué campañas lanzamos, qué cambiamos y por qué.]</p></div>
+        <div class="cv-nota" id="nota-aprendimos" data-read lang="es"><div class="k cv-mono">Lo que aprendimos</div><h3>[Título corto]</h3><p>[Qué funcionó mejor: el anuncio, el público o el mensaje.]</p></div>
+        <div class="cv-nota" id="nota-proximos" data-read lang="es"><div class="k cv-mono">Próximos pasos</div><h3>[Título corto]</h3><p>[Qué vamos a probar el próximo período y qué esperamos lograr.]</p></div>
+      </div>
+      <div class="cv-firma cv-mono">— Equipo swipe digital</div>
+    </div>
+  </section>
+
+
+  <footer class="cv-foot cv-wrap" id="pie">
+    <details id="definiciones">
+      <summary>Cómo leer este reporte</summary>
+      <dl>
+        <dt>Ventas por WhatsApp</dt><dd>Ventas cerradas en los chats, según lo que reporta el equipo de ventas cada día.</dd>
+        <dt>Retorno real</dt><dd>Lo vendido por WhatsApp dividido por la inversión en anuncios de los mismos días.</dd>
+        <dt>Conversaciones</dt><dd>Personas que iniciaron un chat de WhatsApp o Messenger desde un anuncio, después de al menos 7 días sin escribir.</dd>
+        <dt>Compras web</dt><dd>Compras que el píxel de Meta atribuye a los anuncios.</dd>
+        <dt>Personas alcanzadas</dt><dd>Cuentas únicas que vieron al menos un anuncio en el período.</dd>
+        <dt>CTR</dt><dd>Porcentaje de veces que alguien hizo clic al ver el anuncio.</dd>
+      </dl>
+    </details>
+    <div class="marca"><span class="cv-logo"><span class="s cv-disp" style="font-size:20px">swipe</span><span class="tm">™</span><span class="d cv-disp" style="font-size:10px">digital</span></span><div class="cv-mono" style="margin-top:8px">Tráfico pago, IA y sistemas · by swipe™</div></div>
+  </footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+<script src="/js/motor.js"></script>
+<script src="/js/reporte.js"></script>
+</body>
+</html>

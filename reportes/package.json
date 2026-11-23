@@ -1,0 +1,7 @@
+{
+  "name": "swipe-digital-reportes",
+  "private": true,
+  "type": "module",
+  "description": "Reportes de resultados de tráfico pago para clientes de swipe digital",
+  "engines": { "node": ">=20" }
+}
