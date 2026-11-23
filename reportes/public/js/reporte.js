@@ -104,7 +104,8 @@ dash.calc('destacado', {
     const total = validos.reduce((t, r) => t + r.resultados, 0);
     const top = validos.slice().sort((a, b) => b.resultados - a.resultados || (a.costo_por_resultado || 0) - (b.costo_por_resultado || 0))[0];
     return [{id: top.id, name: top.name, campaign_name: top.campaign_name, resultados: top.resultados, costo_por_resultado: top.costo_por_resultado,
-      amount_spent: top.amount_spent, ctr: top.ctr, participacion: total > 0 ? top.resultados / total : null}];
+      amount_spent: top.amount_spent, ctr: top.ctr, participacion: total > 0 ? top.resultados / total : null,
+      tipo_resultado: top.tipo_resultado, es_video: top.es_video, imagen: top.imagen, video: top.video, duracion: top.duracion}];
   },
 });
 
@@ -356,6 +357,116 @@ dash.draw('grafico', (el) => {
       tip.style.top = Math.max(0, Math.min(yI(r.inv), r.vend != null ? yI(r.vend) : H) * esc - tip.offsetHeight - 10) + 'px';
     })
     .on('pointerleave', () => { tip.hidden = true; foco.style('display', 'none'); });
+});
+
+// ===== Piezas (imagen o video de cada anuncio) =====
+const nuevo = (tag, clase, texto) => { const e = document.createElement(tag); if (clase) e.className = clase; if (texto != null) e.textContent = texto; return e; };
+const minutos = (s) => { s = Math.round(s); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+const iniciales = (n) => String(n || '').replace(/[^\p{L}\p{N} ]/gu, ' ').trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join('').toUpperCase() || 'AD';
+
+// Tarjeta visual de un anuncio: portada, botón de play si es video, duración y nombre encima.
+function pieza(ad, {conNombre = true} = {}) {
+  const b = nuevo('button', 'cv-pieza' + (ad.imagen ? '' : ' sin-img'));
+  b.type = 'button';
+  b.setAttribute('aria-label', `Ver el anuncio ${ad.name || ''}`);
+  if (ad.imagen) {
+    const img = nuevo('img'); img.src = ad.imagen; img.alt = ''; img.loading = 'lazy'; img.decoding = 'async';
+    img.addEventListener('error', () => { img.remove(); b.classList.add('sin-img'); b.prepend(nuevo('span', 'ini cv-disp', iniciales(ad.name))); });
+    b.append(img);
+  } else b.append(nuevo('span', 'ini cv-disp', iniciales(ad.name)));
+  b.append(nuevo('span', 'velo'));
+  if (ad.es_video) {
+    const play = nuevo('span', 'play'); play.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>'; b.append(play);
+  }
+  const chips = nuevo('span', 'chips');
+  chips.append(nuevo('span', 'chip cv-mono', ad.es_video ? 'Video' : 'Imagen'));
+  if (ad.duracion) chips.append(nuevo('span', 'chip cv-mono', minutos(ad.duracion)));
+  b.append(chips);
+  if (conNombre) b.append(nuevo('span', 'nombre', ad.name || 'Anuncio'));
+  b.addEventListener('click', () => abrirAnuncio(ad));
+  return b;
+}
+
+// Ventana para ver el anuncio: el video directo si Meta lo da, si no la vista previa oficial de Meta.
+let visor = null;
+function cerrarVisor() { if (!visor) return; visor.hidden = true; visor.querySelector('.cv-visor-media').replaceChildren(); document.body.classList.remove('cv-sin-scroll'); }
+async function abrirAnuncio(ad) {
+  if (!visor) {
+    visor = nuevo('div', 'cv-visor'); visor.hidden = true; visor.setAttribute('role', 'dialog'); visor.setAttribute('aria-modal', 'true');
+    visor.innerHTML = '<div class="cv-visor-caja"><button type="button" class="cv-visor-x" aria-label="Cerrar">×</button><div class="cv-visor-media"></div><div class="cv-visor-info"></div></div>';
+    visor.addEventListener('click', (ev) => { if (ev.target === visor || ev.target.closest('.cv-visor-x')) cerrarVisor(); });
+    document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') cerrarVisor(); });
+    document.querySelector('.cv').append(visor);
+  }
+  const media = visor.querySelector('.cv-visor-media'), info = visor.querySelector('.cv-visor-info');
+  media.replaceChildren(); info.replaceChildren();
+  info.append(nuevo('div', 'nom cv-disp', ad.name || 'Anuncio'), nuevo('div', 'camp cv-mono', ad.campaign_name || ''));
+  const datos = nuevo('div', 'datos');
+  const dato = (k, v) => { const d = nuevo('div'); d.append(nuevo('span', 'k cv-mono', k), nuevo('span', 'v cv-disp', v)); datos.append(d); };
+  if (ad.resultados != null) dato(tipoResultado(ad.tipo_resultado), F.n(ad.resultados));
+  if (ad.costo_por_resultado != null) dato('Costo por resultado', F.gs(ad.costo_por_resultado));
+  if (ad.amount_spent != null) dato('Inversión', F.gs(ad.amount_spent));
+  info.append(datos);
+  visor.hidden = false; document.body.classList.add('cv-sin-scroll');
+  const portada = () => { media.replaceChildren(); const p = pieza(ad, {conNombre: false}); p.disabled = true; media.append(p); };
+  if (ad.video) {
+    const v = nuevo('video'); v.src = ad.video; v.controls = true; v.autoplay = true; v.playsInline = true; if (ad.imagen) v.poster = ad.imagen;
+    v.addEventListener('error', () => cargarVista(ad, media, portada));
+    media.append(v);
+  } else cargarVista(ad, media, portada);
+}
+async function cargarVista(ad, media, portada) {
+  media.replaceChildren(nuevo('div', 'cv-visor-cargando', 'Cargando el anuncio…'));
+  try {
+    const r = await fetch(`/api/anuncio?t=${encodeURIComponent(codigo || '')}&ad=${encodeURIComponent(ad.id)}&formato=feed`);
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j.src) throw new Error(j.error || 'Sin vista previa');
+    const f = nuevo('iframe'); f.src = j.src; f.title = 'Vista previa del anuncio ' + (ad.name || ''); f.loading = 'lazy';
+    f.setAttribute('scrolling', 'no'); f.setAttribute('allow', 'autoplay; encrypted-media; fullscreen');
+    media.replaceChildren(f);
+  } catch (e) {
+    portada();
+    media.append(nuevo('p', 'cv-visor-nota', 'Meta no deja mostrar este anuncio acá. La portada es la del anuncio.'));
+  }
+}
+
+dash.draw('a-media', (el) => {
+  const ad = filaDe('destacado');
+  el.replaceChildren();
+  if (ad) el.append(pieza(ad, {conNombre: false}));
+});
+
+dash.draw('galeria', (el) => {
+  const c = dash.data('anuncios');
+  el.classList.toggle('dash-skeleton', c.status === 'loading');
+  el.replaceChildren();
+  if (c.status === 'error') return el.append(nuevo('div', 'cv-empty', 'No se pudieron cargar los anuncios.'));
+  if (c.status !== 'ok') return;
+  if (!c.data.length) return el.append(nuevo('div', 'cv-empty', 'Sin anuncios con inversión en este período.'));
+  const abierta = el.dataset.abierta === '1';
+  c.data.forEach((ad, i) => {
+    const card = nuevo('article', 'cv-ad');
+    if (!abierta && i >= 6) card.hidden = true;
+    card.append(pieza(ad));
+    const cuerpo = nuevo('div', 'cv-ad-cuerpo');
+    const cab = nuevo('div', 'cv-ad-cab');
+    cab.append(nuevo('span', 'camp cv-mono', ad.campaign_name || ''));
+    if (ad.effective_status) { const sp = nuevo('span', 'cv-pill' + (ad.effective_status === 'ACTIVE' ? ' on' : ''), ESTADOS[ad.effective_status] || ad.effective_status); cab.append(sp); }
+    cuerpo.append(cab);
+    const datos = nuevo('div', 'cv-ad-datos');
+    const dato = (k, v) => { const d = nuevo('div'); d.append(nuevo('span', 'k cv-mono', k), nuevo('span', 'v', v)); datos.append(d); };
+    dato(tipoResultado(ad.tipo_resultado), ad.resultados == null ? '—' : F.n(ad.resultados));
+    dato('Costo', ad.costo_por_resultado == null ? '—' : F.gs(ad.costo_por_resultado));
+    dato('Inversión', ad.amount_spent == null ? '—' : F.gs(ad.amount_spent));
+    cuerpo.append(datos);
+    card.append(cuerpo);
+    el.append(card);
+  });
+  if (!abierta && c.data.length > 6) {
+    const b = nuevo('button', 'cv-mas', `Ver los ${c.data.length} anuncios`); b.type = 'button';
+    b.addEventListener('click', () => { el.dataset.abierta = '1'; dash.dibujar(); });
+    el.append(b);
+  }
 });
 
 // ===== Lectura del equipo =====

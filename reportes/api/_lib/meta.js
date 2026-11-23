@@ -99,7 +99,8 @@ export async function reporteMeta(cuenta, periodo) {
   }
 
   const r0 = resumen.data?.[0];
-  const estados = await estadosDe(act, campanas.map((c) => c.campaign_id), (anuncios.data || []).map((a) => a.ad_id));
+  const {estados, medios} = await estadosDe(act, campanas.map((c) => c.campaign_id), (anuncios.data || []).map((a) => a.ad_id));
+  const videos = await videosDe((anuncios.data || []).map((a) => medios[a.ad_id]?.video_id));
 
   return {
     cuenta: {nombre: info.name, moneda: info.currency, zona: info.timezone_name},
@@ -111,8 +112,14 @@ export async function reporteMeta(cuenta, periodo) {
       .filter((c) => c.amount_spent > 0)
       .sort((a, b) => b.amount_spent - a.amount_spent),
     anuncios: (anuncios.data || [])
-      .map((a) => ({id: a.ad_id, name: a.ad_name, campaign_name: a.campaign_name, effective_status: estados[a.ad_id] || null,
-        amount_spent: num(a.spend), ctr: a.ctr == null ? null : num(a.ctr), ...resultado(a)}))
+      .map((a) => {
+        const m = medios[a.ad_id] || {};
+        const v = (m.video_id && videos[m.video_id]) || {};
+        return {id: a.ad_id, name: a.ad_name, campaign_name: a.campaign_name, effective_status: estados[a.ad_id] || null,
+          amount_spent: num(a.spend), ctr: a.ctr == null ? null : num(a.ctr), ...resultado(a),
+          es_video: !!m.es_video, imagen: (v.portada && !/p(64|160)x/.test(v.portada) ? v.portada : null) || m.imagen || v.portada || null,
+          video: v.video || null, duracion: v.duracion || null};
+      })
       .filter((a) => a.amount_spent > 0),
   };
 }
@@ -130,18 +137,52 @@ function resultado(r) {
   return {resultados: cant || null, tipo_resultado: tipo, costo_por_resultado: cant > 0 ? gasto / cant : null};
 }
 
-// Estado actual (activa, pausada…) de campañas y anuncios, pedido a la cuenta filtrando por sus IDs.
+// Estado actual (activa, pausada…) de campañas y anuncios, y la pieza de cada anuncio (imagen o video),
+// pedidos a la cuenta filtrando por sus IDs.
+const CAMPOS_ANUNCIO = 'id,effective_status,creative.thumbnail_width(720).thumbnail_height(720){thumbnail_url,image_url,object_type,video_id}';
+const CAMPOS_ANUNCIO_SIMPLE = 'id,effective_status,creative{thumbnail_url,image_url,object_type,video_id}';
 async function estadosDe(act, campanas, anuncios) {
-  const salida = {};
-  const buscar = async (tipo, ids) => {
+  const estados = {}, medios = {};
+  const buscar = async (tipo, ids, campos, alternativa) => {
     const unicos = [...new Set(ids.filter(Boolean))];
     for (let i = 0; i < unicos.length; i += 50) {
       const lote = unicos.slice(i, i + 50);
-      const j = await pedir(`${act}/${tipo}`, {fields: 'id,effective_status', limit: '100',
-        filtering: [{field: 'id', operator: 'IN', value: lote}]}).catch((e) => { console.error('estados', tipo, e.message); return {}; });
-      for (const f of j.data || []) salida[f.id] = f.effective_status || null;
+      const pedirCon = (f) => pedir(`${act}/${tipo}`, {fields: f, limit: '100', filtering: [{field: 'id', operator: 'IN', value: lote}]});
+      const j = await pedirCon(campos)
+        .catch((e) => { console.error('estados', tipo, e.message); return alternativa ? pedirCon(alternativa) : {}; })
+        .catch((e) => { console.error('estados (simple)', tipo, e.message); return {}; });
+      for (const f of j.data || []) {
+        estados[f.id] = f.effective_status || null;
+        const c = f.creative;
+        if (c) medios[f.id] = {es_video: c.object_type === 'VIDEO' || !!c.video_id, video_id: c.video_id || null, imagen: c.image_url || c.thumbnail_url || null};
+      }
     }
   };
-  await Promise.all([buscar('campaigns', campanas), buscar('ads', anuncios)]);
+  await Promise.all([buscar('campaigns', campanas, 'id,effective_status'), buscar('ads', anuncios, CAMPOS_ANUNCIO, CAMPOS_ANUNCIO_SIMPLE)]);
+  return {estados, medios};
+}
+
+// Dirección del archivo de video (si Meta la da para esta clave) y una portada grande.
+async function videosDe(ids) {
+  const salida = {};
+  await Promise.all([...new Set(ids.filter(Boolean))].slice(0, 6).map(async (id) => {
+    const j = await pedir(id, {fields: 'source,picture,length,thumbnails{uri,width,is_preferred}'})
+      .catch(() => pedir(id, {fields: 'picture,length'}))
+      .catch(() => null);
+    if (!j) return;
+    const miniaturas = (j.thumbnails?.data || []).slice().sort((a, b) => (b.is_preferred - a.is_preferred) || ((b.width || 0) - (a.width || 0)));
+    salida[id] = {video: j.source || null, portada: miniaturas[0]?.uri || j.picture || null, duracion: j.length ? num(j.length) : null};
+  }));
   return salida;
+}
+
+// Vista previa oficial de Meta de un anuncio (un iframe que muestra el anuncio tal cual, con el video).
+export async function vistaPrevia(cuenta, anuncioId, formato) {
+  const act = `act_${String(cuenta).replace(/^act_/, '')}`;
+  const ad = await pedir(anuncioId, {fields: 'account_id,name'});
+  if (`act_${ad.account_id}` !== act) throw new ErrorMeta('El anuncio no es de esta cuenta.');
+  const j = await pedir(`${anuncioId}/previews`, {ad_format: formato});
+  const html = j.data?.[0]?.body || '';
+  const src = (html.match(/src="([^"]+)"/) || [])[1];
+  return src ? src.replace(/&amp;/g, '&') : null;
 }

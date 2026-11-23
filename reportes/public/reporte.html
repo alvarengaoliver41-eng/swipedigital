@@ -102,6 +102,7 @@
   <section class="cv-sec cv-wrap" id="destacado">
     <div class="cv-head"><div><div class="cv-label cv-mono"><span class="cv-num">05</span>Creatividades</div><h2 class="cv-h2 cv-disp">El anuncio que <span class="v">mejor funcionó</span></h2></div></div>
     <div class="cv-star" id="anuncio-estrella">
+      <div class="cv-star-media" data-draw="a-media" data-source="destacado"></div>
       <div class="cv-star-l">
         <span class="badge cv-mono">Anuncio destacado</span>
         <div class="nom cv-disp" data-draw="a-nom" data-source="destacado" data-field="name" data-row="0">—</div>
@@ -115,12 +116,8 @@
         <div><div class="cv-label cv-mono">CTR</div><div class="v cv-disp" data-draw="a-ctr" data-source="destacado" data-field="ctr" data-row="0">—</div></div>
       </div>
     </div>
-    <div class="cv-tablewrap">
-      <table class="cv-table" id="tabla-anuncios" data-source="anuncios" data-row-key="id">
-        <thead><tr><th data-field="name">Anuncio</th><th data-field="effective_status">Estado</th><th class="n" data-field="amount_spent">Inversión</th><th class="n" data-field="resultados">Resultados</th><th class="n" data-field="costo_por_resultado">Costo por resultado</th><th class="n" data-field="ctr">CTR</th></tr></thead>
-        <tbody data-draw="tb-anuncios"></tbody>
-      </table>
-    </div>
+    <div class="cv-galeria-cab"><h3 class="cv-h3b cv-disp">Todos los anuncios del período</h3><span class="cv-mono cv-galeria-ayuda">Tocá una pieza para verla</span></div>
+    <div class="cv-galeria" id="galeria-anuncios" data-draw="galeria" data-source="anuncios"></div>
   </section>
 
   <section class="cv-sec cv-wrap" id="campanas">
