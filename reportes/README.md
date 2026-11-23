@@ -74,6 +74,6 @@ Si Meta limita la cantidad de consultas, se puede pedir más acceso desde la app
 
 ## Notas
 
-- Los datos de Meta llegan hasta el día anterior, en la zona horaria de cada cuenta publicitaria. Por eso las ventas de hoy entran al reporte del período desde mañana. A la meta del mes entran al instante.
+- El período incluye el día de hoy (en la zona horaria de cada cuenta publicitaria): las ventas que se cargan hoy aparecen al instante en el reporte. Los números de Meta de hoy son parciales y se actualizan cada 10 minutos.
 - El reporte guarda la respuesta de Meta 10 minutos para no consultar Meta en cada visita. Las ventas y metas se ven al instante.
 - Para probar en tu computadora: `npm i -g vercel`, `vercel link`, `vercel env pull .env` y `vercel dev` dentro de esta carpeta.

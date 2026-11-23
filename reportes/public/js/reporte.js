@@ -189,7 +189,9 @@ dash.draw('logo-chico', (el) => dibujarLogo(el, 20, true));
 dash.draw('logo-grande', (el) => dibujarLogo(el, 72, false));
 dash.draw('cliente', (el) => { el.textContent = C.nombre; });
 dash.draw('mes-nombre', (el) => { el.textContent = MESES_LARGOS[new Date().getMonth()]; });
-valor('desde', 'kpis', 'desde', F.fecha); valor('hasta', 'kpis', 'hasta', F.fecha);
+valor('desde', 'kpis', 'desde', F.fecha);
+const hoyLocal = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+valor('hasta', 'kpis', 'hasta', (v) => (v === hoyLocal() ? 'hoy, ' + F.fecha(v) : F.fecha(v)));
 valor('fr-roas', 'ventas_kpi', 'roas_real', F.gsx); valor('fr-cmsj', 'kpis', 'costo_mensaje', F.gs); valor('fr-roasweb', 'kpis', 'roas', F.gsx);
 
 valor('rb-vend', 'ventas_kpi', 'monto', F.gs); cambio('rb-vend-c', 'ventas_kpi', 'cambio_monto', 'sube');

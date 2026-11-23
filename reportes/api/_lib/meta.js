@@ -92,10 +92,10 @@ async function segmentosDe(act, rango) {
   };
 }
 
-// Fecha de ayer en la zona horaria de la cuenta publicitaria (Meta cierra el día en esa zona).
-function ayerEn(zona) {
-  const hoy = new Intl.DateTimeFormat('en-CA', {timeZone: zona || 'America/Asuncion', year: 'numeric', month: '2-digit', day: '2-digit'}).format(new Date());
-  return sumarDias(hoy, -1);
+// Fecha de hoy en la zona horaria de la cuenta publicitaria (Meta cierra el día en esa zona).
+// El período incluye el día en curso para que las ventas cargadas hoy se vean al instante.
+function hoyEn(zona) {
+  return new Intl.DateTimeFormat('en-CA', {timeZone: zona || 'America/Asuncion', year: 'numeric', month: '2-digit', day: '2-digit'}).format(new Date());
 }
 export function sumarDias(iso, n) {
   const d = new Date(iso + 'T00:00:00Z');
@@ -110,7 +110,7 @@ export async function reporteMeta(cuenta, periodo) {
   const act = `act_${String(cuenta).replace(/^act_/, '')}`;
   const dias = DIAS_PERIODO[periodo] || 30;
   const info = await pedir(act, {fields: 'name,currency,timezone_name'});
-  const hasta = ayerEn(info.timezone_name);
+  const hasta = hoyEn(info.timezone_name);
   const desde = sumarDias(hasta, -(dias - 1));
   const inicio90 = sumarDias(hasta, -89);
   const rango = {since: desde, until: hasta};
