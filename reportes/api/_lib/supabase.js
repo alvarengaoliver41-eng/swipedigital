@@ -10,7 +10,8 @@ function config() {
 export async function consultar(tabla, filtros) {
   const {url, key} = config();
   const r = await fetch(`${url}/rest/v1/${tabla}?${new URLSearchParams(filtros)}`, {
-    headers: {apikey: key, Authorization: `Bearer ${key}`},
+    // Las claves nuevas (sb_secret_...) van solo en "apikey"; las clásicas (JWT) también en Authorization.
+    headers: key.startsWith('sb_') ? {apikey: key} : {apikey: key, Authorization: `Bearer ${key}`},
   });
   if (!r.ok) throw new Error(`Supabase respondió ${r.status}`);
   return r.json();
