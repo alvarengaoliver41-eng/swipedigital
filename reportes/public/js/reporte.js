@@ -116,10 +116,10 @@ const nf0 = new Intl.NumberFormat('es-PY', {maximumFractionDigits: 0});
 const nf1 = new Intl.NumberFormat('es-PY', {minimumFractionDigits: 1, maximumFractionDigits: 1});
 const nf2 = new Intl.NumberFormat('es-PY', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 const F = {
-  gs: (v) => '₲ ' + nf0.format(Math.round(v)),
+  gs: (v) => '₲\u00a0' + nf0.format(Math.round(v)),
   n: (v) => nf0.format(Math.round(v)),
   x: (v) => nf1.format(v) + 'x',
-  gsx: (v) => '₲ ' + nf1.format(v),
+  gsx: (v) => '₲\u00a0' + nf1.format(v),
   pct: (v) => nf2.format(v) + ' %',
   pct1: (v) => nf1.format(v) + ' %',
   frac: (v) => nf0.format(Math.round(v * 100)) + ' %',
@@ -139,6 +139,11 @@ const tipoResultado = (ind) => {
   return ind.split('.').pop().replace(/_/g, ' ');
 };
 const movimiento = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: no-preference)').matches);
+// El cliente usa la carga de ventas por WhatsApp si el equipo cargó alguna venta o alguna meta.
+const hayVentas = () => {
+  const v = dash.data('ventas'), m = dash.data('metas');
+  return (v.status === 'ok' && v.data.length > 0) || (m.status === 'ok' && m.data.length > 0);
+};
 const filaDe = (src) => { const d = dash.data(src); return d.status === 'ok' && Array.isArray(d.data) && d.data[0] ? d.data[0] : null; };
 
 // Datos del cliente (nombre, tipo y logo) que llegan con el reporte
@@ -167,7 +172,9 @@ const valor = (name, src, campo, fmt) => dash.draw(name, (el) => {
 const cambio = (name, src, campo, sentido) => dash.draw(name, (el) => {
   const fila = filaDe(src);
   const v = fila ? fila[campo] : null;
-  el.textContent = v == null ? 'sin dato' : F.cambio(v);
+  const linea = el.closest('.cv-chg');
+  if (linea) linea.hidden = v == null;
+  el.textContent = v == null ? '' : F.cambio(v);
   const bueno = sentido === 'neutro' || v == null || Math.abs(v) < 0.005 ? null : (sentido === 'sube' ? v > 0 : v < 0);
   el.className = bueno == null ? 'neu' : bueno ? 'ok' : 'mal';
 });
@@ -189,6 +196,17 @@ valor('rb-nv', 'ventas_kpi', 'ventas', F.n); cambio('rb-nv-c', 'ventas_kpi', 'ca
 valor('rb-msj', 'kpis', 'mensajes', F.n); cambio('rb-msj-c', 'kpis', 'cambio_mensajes', 'sube');
 valor('rb-web', 'kpis', 'compras', F.n); cambio('rb-web-c', 'kpis', 'cambio_compras', 'sube');
 valor('rb-inv', 'kpis', 'inversion', F.gs); cambio('rb-inv-c', 'kpis', 'cambio_inversion', 'neutro');
+valor('rb-alc', 'kpis', 'alcance', F.n);
+dash.draw('rb-costo', (el) => {
+  const f = filaDe('kpis'); const v = f ? f[C.tipo === 'ventas' ? 'costo_compra' : 'costo_mensaje'] : null;
+  el.textContent = v == null ? '—' : F.gs(v);
+});
+dash.draw('rb-costo-c', (el) => {
+  const f = filaDe('kpis'); const v = f ? f[C.tipo === 'ventas' ? 'cambio_costo_compra' : 'cambio_costo_mensaje'] : null;
+  const linea = el.closest('.cv-chg'); if (linea) linea.hidden = v == null;
+  el.textContent = v == null ? '' : F.cambio(v);
+  el.className = v == null || Math.abs(v) < 0.005 ? 'neu' : v < 0 ? 'ok' : 'mal';
+});
 
 valor('v-roas', 'ventas_kpi', 'roas_real', F.x); valor('v-cpv', 'ventas_kpi', 'costo_venta', F.gs);
 valor('v-ticket', 'ventas_kpi', 'ticket', F.gs); valor('v-max', 'ventas_kpi', 'venta_max', F.gs); valor('v-cierre', 'ventas_kpi', 'tasa_cierre', F.pct1);
@@ -248,49 +266,38 @@ dash.draw('barra-ventas', (el) => {
 });
 
 dash.draw('embudo', (el) => {
-  const k = dash.data('kpis'), v = dash.data('ventas_kpi');
+  const k = dash.data('kpis');
   el.classList.toggle('dash-skeleton', k.status === 'loading');
   el.replaceChildren();
   const fk = filaDe('kpis'), fv = filaDe('ventas_kpi');
-  if (k.status === 'error') { const d = document.createElement('div'); d.className = 'cv-empty'; d.textContent = 'No se pudo cargar el recorrido.'; el.append(d); return; }
-  if (!fk) { el.textContent = '—'; return; }
+  const vacio = (t) => { const d = document.createElement('div'); d.className = 'cv-empty'; d.textContent = t; el.append(d); };
+  if (k.status === 'error') return vacio('No se pudo cargar el recorrido.');
+  if (!fk) return;
   const etapas = [
     {t: 'Personas alcanzadas', v: fk.alcance},
-    {t: 'Clics para saber más', v: fk.clics_enlace},
-    {t: 'Conversaciones de WhatsApp', v: fk.mensajes},
-    {t: 'Ventas cerradas', v: fv ? fv.ventas : null},
-  ];
-  const tasas = ['hizo clic', 'escribió por WhatsApp', 'compró'];
-  const W = Math.max(320, el.clientWidth || 800);
-  const angosto = W < 620;
-  const filaH = angosto ? 74 : 70, gap = angosto ? 34 : 30, H = etapas.length * filaH + (etapas.length - 1) * gap;
-  const etqW = angosto ? 0 : 250;
-  const anchoMax = W - etqW - (angosto ? 0 : 20);
-  const base = etapas[0].v || 1;
-  const ancho = (x) => (x == null ? 0.12 : Math.max(0.12, Math.pow(Math.max(0, x) / base, 0.32))) * anchoMax;
-  const svg = d3.select(el).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img')
-    .attr('aria-label', 'Embudo: ' + etapas.map((e) => `${e.t} ${e.v == null ? 'sin dato' : F.n(e.v)}`).join(', '));
-  const grad = svg.append('defs').append('linearGradient').attr('id', 'grad-embudo').attr('x1', '0').attr('x2', '1');
-  grad.append('stop').attr('offset', '0').style('stop-color', '#9B72FF');
-  grad.append('stop').attr('offset', '1').style('stop-color', 'var(--cl)');
+    {t: 'Clics para saber más', v: fk.clics_enlace, tasa: 'hizo clic'},
+    C.tipo === 'ventas' ? {t: 'Compras web', v: fk.compras, tasa: 'compró en la web'} : {t: 'Conversaciones de WhatsApp', v: fk.mensajes, tasa: 'escribió por WhatsApp'},
+    C.tipo !== 'ventas' && hayVentas() ? {t: 'Ventas por WhatsApp', v: fv ? fv.ventas : null, tasa: 'compró'} : null,
+  ].filter((e) => e && e.v != null);
+  if (!etapas.length || !(etapas[0].v > 0)) return vacio('Sin datos del recorrido en este período.');
+  const base = etapas[0].v;
   etapas.forEach((e, i) => {
-    const y = i * (filaH + gap);
-    const w = ancho(e.v), x0 = etqW + (anchoMax - w) / 2;
-    const g = svg.append('g');
-    const ultimo = i === etapas.length - 1;
-    g.append('rect').attr('x', x0).attr('y', y).attr('width', w).attr('height', filaH).attr('rx', 14)
-      .attr('fill', ultimo ? 'url(#grad-embudo)' : '#1C1A24').attr('stroke', ultimo ? 'none' : '#2E2A3A');
-    const cx = etqW + anchoMax / 2;
-    g.append('text').attr('class', 'num').attr('x', cx).attr('y', y + filaH / 2 + (angosto ? -4 : 9)).attr('text-anchor', 'middle')
-      .style('font-size', angosto ? '24px' : '28px').style('fill', ultimo ? '#0A0A0B' : '#FFFFFF').text(e.v == null ? '—' : F.n(e.v));
-    if (angosto) g.append('text').attr('class', 'etq').attr('x', cx).attr('y', y + filaH / 2 + 18).attr('text-anchor', 'middle').style('fill', ultimo ? '#0A0A0B' : '#B9B9C0').text(e.t);
-    else g.append('text').attr('class', 'etq').attr('x', 0).attr('y', y + filaH / 2 + 4).text(e.t);
-    if (i < etapas.length - 1) {
-      const a = e.v, b = etapas[i + 1].v;
-      const t = a > 0 && b != null ? (b / a) * 100 : null;
-      g.append('text').attr('class', 'tasa').attr('x', cx).attr('y', y + filaH + gap / 2 + 5).attr('text-anchor', 'middle')
-        .text(t == null ? '↓' : `↓  ${F.pct1(t)} ${tasas[i]}`);
+    if (i > 0) {
+      const prev = etapas[i - 1].v;
+      const t = document.createElement('div'); t.className = 'cv-emb-tasa';
+      t.textContent = prev > 0 ? `↓ ${F.pct1((e.v / prev) * 100)} ${e.tasa}` : '↓';
+      el.append(t);
     }
+    const fila = document.createElement('div'); fila.className = 'cv-emb-fila' + (i === etapas.length - 1 ? ' ultima' : '');
+    const top = document.createElement('div'); top.className = 'cv-emb-top';
+    const n = document.createElement('span'); n.className = 'num cv-disp'; n.textContent = F.n(e.v);
+    const l = document.createElement('span'); l.className = 'etq cv-mono'; l.textContent = e.t;
+    top.append(n, l);
+    const barra = document.createElement('div'); barra.className = 'cv-emb-bar';
+    const relleno = document.createElement('i'); relleno.style.width = Math.max(4, Math.pow(Math.max(0, e.v) / base, 0.32) * 100) + '%';
+    barra.append(relleno);
+    fila.append(top, barra);
+    el.append(fila);
   });
 });
 
@@ -306,7 +313,7 @@ dash.draw('grafico', (el) => {
   const nomRes = C.tipo === 'ventas' ? 'Compras web' : 'Conversaciones';
   const rows = s.data.map((r) => ({fecha: r.fecha, f: parse(r.fecha), inv: r.inversion, res: r[campo], vend: r.vendido})).filter((r) => r.f);
   if (!rows.length || !d3.sum(rows, (r) => r.inv)) return vacio('No hubo inversión en este período.');
-  const W = Math.max(300, el.clientWidth || 600), H = 290;
+  const W = Math.max(280, el.clientWidth || 600), H = W < 520 ? 240 : 290;
   const yI = d3.scaleLinear().domain([0, d3.max(rows, (r) => Math.max(r.inv, r.vend || 0)) || 1]).nice();
   const yR = d3.scaleLinear().domain([0, d3.max(rows, (r) => r.res) || 1]).nice();
   const ticksI = yI.ticks(4), ticksR = yR.ticks(4).filter(Number.isInteger);
@@ -351,10 +358,54 @@ dash.draw('grafico', (el) => {
     .on('pointerleave', () => { tip.hidden = true; foco.style('display', 'none'); });
 });
 
+// ===== Lectura del equipo =====
+const notaActual = () => { const d = dash.data('notas'); return d.status === 'ok' && Array.isArray(d.data) && d.data[0] ? d.data[0] : null; };
+const BLOQUES = [['hicimos', 'Lo que hicimos'], ['aprendimos', 'Lo que aprendimos'], ['proximos', 'Próximos pasos']];
+const notaTiene = (n) => !!n && BLOQUES.some(([k]) => (n[k + '_titulo'] || '').trim() || (n[k + '_texto'] || '').trim());
+dash.draw('notas', (el) => {
+  const n = notaActual();
+  el.replaceChildren();
+  if (!notaTiene(n)) return;
+  for (const [k, nombre] of BLOQUES) {
+    const titulo = (n[k + '_titulo'] || '').trim(), texto = (n[k + '_texto'] || '').trim();
+    if (!titulo && !texto) continue;
+    const card = document.createElement('div'); card.className = 'cv-nota';
+    const kk = document.createElement('div'); kk.className = 'k cv-mono'; kk.textContent = nombre; card.append(kk);
+    if (titulo) { const h = document.createElement('h3'); h.textContent = titulo; card.append(h); }
+    for (const parrafo of texto.split(/\n+/).filter(Boolean)) { const p = document.createElement('p'); p.textContent = parrafo; card.append(p); }
+    el.append(card);
+  }
+  el.dataset.cantidad = el.children.length;
+});
+dash.draw('notas-mes', (el) => {
+  const n = notaActual();
+  const [y, m] = n ? String(n.mes).split('-').map(Number) : [];
+  el.textContent = m ? ` · ${MESES_LARGOS[m - 1]} ${y}` : '';
+});
+
 // ===== Tablas =====
-const celda = (tr, texto, clase) => { const td = document.createElement('td'); if (clase) td.className = clase; td.textContent = texto; tr.append(td); return td; };
+const celda = (tr, texto, clase, etiqueta) => { const td = document.createElement('td'); if (clase) td.className = clase; if (etiqueta) td.dataset.label = etiqueta; td.textContent = texto; tr.append(td); return td; };
 const filaMensaje = (tb, cols, texto) => { const tr = document.createElement('tr'); const td = celda(tr, texto, 'msg'); td.colSpan = cols; tb.append(tr); };
-const estado = (tr, st) => { const td = document.createElement('td'); const sp = document.createElement('span'); sp.className = 'cv-pill' + (st === 'ACTIVE' ? ' on' : ''); sp.textContent = ESTADOS[st] || st || '—'; td.append(sp); tr.append(td); };
+const estado = (tr, st) => { const td = document.createElement('td'); td.className = 'est'; const sp = document.createElement('span'); sp.className = 'cv-pill' + (st === 'ACTIVE' ? ' on' : ''); sp.textContent = ESTADOS[st] || st || '—'; td.append(sp); tr.append(td); };
+
+// En tablas largas se muestran las primeras 5 filas y un botón para ver el resto.
+const recortar = (tb, total) => {
+  const wrap = tb.closest('.cv-tablewrap');
+  wrap.querySelector('.cv-mas')?.remove();
+  if (total <= 6 || wrap.dataset.abierta === '1') return;
+  [...tb.children].slice(5).forEach((tr) => { tr.hidden = true; });
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'cv-mas';
+  b.textContent = `Ver las ${total} filas`;
+  b.addEventListener('click', () => { wrap.dataset.abierta = '1'; [...tb.children].forEach((tr) => { tr.hidden = false; }); b.remove(); });
+  wrap.append(b);
+};
+
+// La columna "Estado" se oculta si Meta no devolvió el estado de ninguna fila.
+const columnaEstado = (tb, filas) => {
+  const hay = filas.some((r) => r.effective_status);
+  tb.closest('table').classList.toggle('sin-estado', !hay);
+  return hay;
+};
 
 dash.draw('tb-anuncios', (tb) => {
   const c = dash.data('anuncios');
@@ -362,15 +413,17 @@ dash.draw('tb-anuncios', (tb) => {
   if (c.status === 'error') return filaMensaje(tb, 6, 'No se pudieron cargar los anuncios.');
   if (c.status !== 'ok') return filaMensaje(tb, 6, 'Cargando anuncios…');
   if (!c.data.length) return filaMensaje(tb, 6, 'Sin anuncios con inversión en este período.');
+  const conEstado = columnaEstado(tb, c.data);
   for (const r of c.data) {
     const tr = document.createElement('tr'); tr.dataset.key = r.id;
-    celda(tr, r.name || '—', 'nom'); estado(tr, r.effective_status);
-    celda(tr, r.amount_spent == null ? '—' : F.gs(r.amount_spent), 'n');
-    celda(tr, r.resultados == null ? '—' : F.n(r.resultados), 'n');
-    celda(tr, r.costo_por_resultado == null ? '—' : F.gs(r.costo_por_resultado), 'n');
-    celda(tr, r.ctr == null ? '—' : F.pct(r.ctr), 'n');
+    celda(tr, r.name || '—', 'nom'); if (conEstado) estado(tr, r.effective_status);
+    celda(tr, r.amount_spent == null ? '—' : F.gs(r.amount_spent), 'n', 'Inversión');
+    celda(tr, r.resultados == null ? '—' : F.n(r.resultados), 'n', 'Resultados');
+    celda(tr, r.costo_por_resultado == null ? '—' : F.gs(r.costo_por_resultado), 'n', 'Costo por resultado');
+    celda(tr, r.ctr == null ? '—' : F.pct(r.ctr), 'n', 'CTR');
     tb.append(tr);
   }
+  recortar(tb, c.data.length);
 });
 
 dash.draw('tb-campanas', (tb) => {
@@ -379,15 +432,17 @@ dash.draw('tb-campanas', (tb) => {
   if (c.status === 'error') return filaMensaje(tb, 6, 'No se pudieron cargar las campañas.');
   if (c.status !== 'ok') return filaMensaje(tb, 6, 'Cargando campañas…');
   if (!c.data.length) return filaMensaje(tb, 6, 'Sin campañas con inversión en este período.');
+  const conEstado = columnaEstado(tb, c.data);
   for (const r of c.data) {
     const tr = document.createElement('tr'); tr.dataset.key = r.id;
-    celda(tr, r.name || '—', 'nom'); estado(tr, r.effective_status);
-    celda(tr, r.amount_spent == null ? '—' : F.gs(r.amount_spent), 'n');
-    celda(tr, r.resultados == null ? '—' : F.n(r.resultados), 'n');
-    celda(tr, tipoResultado(r.tipo_resultado), 'sub');
-    celda(tr, r.costo_por_resultado == null ? '—' : F.gs(r.costo_por_resultado), 'n');
+    celda(tr, r.name || '—', 'nom'); if (conEstado) estado(tr, r.effective_status);
+    celda(tr, r.amount_spent == null ? '—' : F.gs(r.amount_spent), 'n', 'Inversión');
+    celda(tr, r.resultados == null ? '—' : F.n(r.resultados), 'n', 'Resultados');
+    celda(tr, tipoResultado(r.tipo_resultado), 'sub', 'Tipo');
+    celda(tr, r.costo_por_resultado == null ? '—' : F.gs(r.costo_por_resultado), 'n', 'Costo por resultado');
     tb.append(tr);
   }
+  recortar(tb, c.data.length);
 });
 
 // ===== Controles y qué se muestra =====
@@ -407,6 +462,17 @@ dash.onData(() => {
   document.querySelectorAll('.cv [data-con-meta]').forEach((e) => { e.hidden = !conMeta; });
   document.querySelectorAll('.cv [data-con-meta-n]').forEach((e) => { e.hidden = !(fm && fm.meta_ventas); });
   document.querySelectorAll('.cv [data-sin-meta]').forEach((e) => { e.hidden = conMeta || !fm; });
+  const conVentas = hayVentas();
+  const ventasListas = dash.data('ventas').status !== 'loading';
+  document.querySelectorAll('.cv [data-ventas]').forEach((e) => { e.hidden = ventasListas && !conVentas; });
+  document.querySelectorAll('.cv [data-sin-ventas]').forEach((e) => { e.hidden = !ventasListas || conVentas; });
+  document.querySelectorAll('.cv-meta').forEach((e) => e.classList.toggle('sin-meta', !conMeta));
+  const tarjetas = {'v-retorno': 'roas_real', 'v-costo': 'costo_venta', 'v-ticket': 'ticket', 'v-maxima': 'venta_max', 'v-cierre': 'tasa_cierre'};
+  for (const [id, campo] of Object.entries(tarjetas)) document.querySelectorAll('#' + id).forEach((e) => { e.hidden = !!fv && fv[campo] == null; });
+  document.querySelectorAll('#lectura-equipo').forEach((e) => { e.hidden = !notaTiene(notaActual()); });
+  let num = 0;
+  document.querySelectorAll('.cv-sec').forEach((sec) => { const n = sec.querySelector('.cv-num'); if (n && !sec.hidden) n.textContent = String(++num).padStart(2, '0'); });
+  document.querySelectorAll('#lectura-equipo .cv-label').forEach((e) => { if (e.firstChild && e.firstChild.nodeType === 3) e.firstChild.textContent = String(num + 1).padStart(2, '0') + ' · Lectura del equipo'; });
   const d = dash.data('destacado');
   document.querySelectorAll('#anuncio-estrella').forEach((e) => { e.hidden = d.status === 'ok' && Array.isArray(d.data) && d.data.length === 0; });
 });
@@ -448,9 +514,11 @@ const cargarVentas = async () => {
     if (!r.ok) throw new Error(j.error || 'No se pudieron cargar las ventas.');
     dash.poner('ventas', {status: 'ok', data: j.ventas || []});
     dash.poner('metas', {status: 'ok', data: j.metas || []});
+    dash.poner('notas', {status: 'ok', data: j.notas || []});
   } catch (e) {
     dash.poner('ventas', {status: 'error', data: []});
     dash.poner('metas', {status: 'error', data: []});
+    dash.poner('notas', {status: 'error', data: []});
   }
   dash.dibujar();
 };

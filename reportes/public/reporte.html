@@ -45,18 +45,20 @@
     <p class="cv-frase cv-disp" data-frase="vacio" id="frase-vacia" hidden>En este período no hubo inversión en anuncios.</p>
 
     <div class="cv-ribbon" id="cifras-portada">
-      <div class="cv-rb dest" id="rb-vendido"><div class="lbl cv-mono">Vendido por WhatsApp</div><div class="v cv-disp cuenta" data-draw="rb-vend" data-source="ventas_kpi" data-field="monto" data-row="0">—</div><div class="cv-chg cv-mono"><span data-draw="rb-vend-c" data-source="ventas_kpi" data-field="cambio_monto" data-row="0">—</span> vs. anterior</div></div>
-      <div class="cv-rb" id="rb-ventas"><div class="lbl cv-mono">Ventas cerradas</div><div class="v cv-disp cuenta" data-draw="rb-nv" data-source="ventas_kpi" data-field="ventas" data-row="0">—</div><div class="cv-chg cv-mono"><span data-draw="rb-nv-c" data-source="ventas_kpi" data-field="cambio_ventas" data-row="0">—</span> vs. anterior</div></div>
+      <div class="cv-rb dest" id="rb-vendido" data-ventas><div class="lbl cv-mono">Vendido por WhatsApp</div><div class="v cv-disp cuenta" data-draw="rb-vend" data-source="ventas_kpi" data-field="monto" data-row="0">—</div><div class="cv-chg cv-mono"><span data-draw="rb-vend-c" data-source="ventas_kpi" data-field="cambio_monto" data-row="0">—</span> vs. anterior</div></div>
+      <div class="cv-rb" id="rb-ventas" data-ventas><div class="lbl cv-mono">Ventas cerradas</div><div class="v cv-disp cuenta" data-draw="rb-nv" data-source="ventas_kpi" data-field="ventas" data-row="0">—</div><div class="cv-chg cv-mono"><span data-draw="rb-nv-c" data-source="ventas_kpi" data-field="cambio_ventas" data-row="0">—</span> vs. anterior</div></div>
+      <div class="cv-rb dest" id="rb-alcance" data-sin-ventas hidden><div class="lbl cv-mono">Personas alcanzadas</div><div class="v cv-disp cuenta" data-draw="rb-alc" data-source="kpis" data-field="alcance" data-row="0">—</div><div class="cv-chg cv-mono">vieron al menos un anuncio</div></div>
+      <div class="cv-rb" id="rb-costo" data-sin-ventas hidden><div class="lbl cv-mono"><span data-tipo="mensajes">Costo por conversación</span><span data-tipo="ventas" hidden>Costo por compra web</span></div><div class="v cv-disp" data-draw="rb-costo" data-source="kpis">—</div><div class="cv-chg cv-mono"><span data-draw="rb-costo-c" data-source="kpis">—</span> vs. anterior</div></div>
       <div class="cv-rb" data-tipo="mensajes" id="rb-conversaciones"><div class="lbl cv-mono">Conversaciones</div><div class="v cv-disp cuenta" data-draw="rb-msj" data-source="kpis" data-field="mensajes" data-row="0">—</div><div class="cv-chg cv-mono"><span data-draw="rb-msj-c" data-source="kpis" data-field="cambio_mensajes" data-row="0">—</span> vs. anterior</div></div>
       <div class="cv-rb" data-tipo="ventas" id="rb-compras-web" hidden><div class="lbl cv-mono">Compras web</div><div class="v cv-disp cuenta" data-draw="rb-web" data-source="kpis" data-field="compras" data-row="0">—</div><div class="cv-chg cv-mono"><span data-draw="rb-web-c" data-source="kpis" data-field="cambio_compras" data-row="0">—</span> vs. anterior</div></div>
       <div class="cv-rb" id="rb-inversion"><div class="lbl cv-mono">Inversión en anuncios</div><div class="v cv-disp cuenta" data-draw="rb-inv" data-source="kpis" data-field="inversion" data-row="0">—</div><div class="cv-chg cv-mono"><span data-draw="rb-inv-c" data-source="kpis" data-field="cambio_inversion" data-row="0">—</span> vs. anterior</div></div>
     </div>
   </section>
 
-  <section class="cv-sec cv-wrap" id="meta-mes">
+  <section class="cv-sec cv-wrap" id="meta-mes" data-ventas>
     <div class="cv-head"><div><div class="cv-label cv-mono"><span class="cv-num">01</span>Meta del mes</div><h2 class="cv-h2 cv-disp">Cómo vamos con la meta de <span class="c" data-draw="mes-nombre">—</span></h2></div><p class="cv-intro">La meta de ventas se define a principio de mes y se compara con lo que va del mes, día por día.</p></div>
     <div class="cv-meta" id="panel-meta">
-      <div class="cv-ring" id="anillo-meta" data-draw="anillo" data-source="meta_mes"></div>
+      <div class="cv-ring" id="anillo-meta" data-draw="anillo" data-source="meta_mes" data-con-meta></div>
       <div>
         <span class="cv-semaforo" id="semaforo" data-draw="semaforo" data-source="meta_mes" data-field="estado" data-row="0">—</span>
         <div data-con-meta id="meta-detalle">
@@ -72,7 +74,7 @@
     </div>
   </section>
 
-  <section class="cv-sec cv-wrap" id="ventas-whatsapp">
+  <section class="cv-sec cv-wrap" id="ventas-whatsapp" data-ventas>
     <div class="cv-head"><div><div class="cv-label cv-mono"><span class="cv-num">02</span>Ventas confirmadas</div><h2 class="cv-h2 cv-disp">Lo que se <span class="c">vendió por WhatsApp</span></h2></div><p class="cv-intro">Ventas cerradas en los chats que generaron los anuncios, según lo que reporta el equipo de ventas cada día.</p></div>
     <div class="cv-vgrid">
       <div class="cv-vcard dest" id="v-retorno"><div class="lbl cv-mono">Retorno real</div><div class="v cv-disp" data-draw="v-roas" data-source="ventas_kpi" data-field="roas_real" data-row="0">—</div><div class="h">guaraníes vendidos por cada guaraní invertido</div></div>
@@ -84,15 +86,15 @@
   </section>
 
   <section class="cv-sec cv-wrap" id="recorrido">
-    <div class="cv-head"><div><div class="cv-label cv-mono"><span class="cv-num">03</span>El recorrido</div><h2 class="cv-h2 cv-disp">Del anuncio <span class="c">a la venta</span></h2></div><p class="cv-intro">Cuántas personas vieron los anuncios, cuántas se interesaron, cuántas escribieron y cuántas compraron.</p></div>
+    <div class="cv-head"><div><div class="cv-label cv-mono"><span class="cv-num">03</span>El recorrido</div><h2 class="cv-h2 cv-disp">Del anuncio <span class="c" data-ventas>a la venta</span><span class="c" data-sin-ventas hidden><span data-tipo="mensajes">a la conversación</span><span data-tipo="ventas" hidden>a la compra</span></span></h2></div><p class="cv-intro">Cuántas personas vieron los anuncios, cuántas se interesaron<span data-tipo="mensajes">, cuántas escribieron</span><span data-ventas>, y cuántas compraron</span>.</p></div>
     <div class="cv-embudo" id="embudo" data-draw="embudo" data-source="kpis ventas_kpi"></div>
-    <p class="cv-vnota">El ancho de cada etapa está comprimido para que se vean todas. Los números son los reales.</p>
+    <p class="cv-vnota">El largo de cada barra está comprimido para que se vean todas las etapas. Los números son los reales.</p>
   </section>
 
   <section class="cv-sec cv-wrap" id="dia-a-dia">
-    <div class="cv-head"><div><div class="cv-label cv-mono"><span class="cv-num">04</span>Día a día</div><h2 class="cv-h2 cv-disp">Lo invertido y lo que volvió</h2></div><p class="cv-intro">Barras: inversión diaria. Línea de color: lo vendido por WhatsApp ese día. Línea blanca: <span data-tipo="mensajes">conversaciones</span><span data-tipo="ventas" hidden>compras web</span>.</p></div>
+    <div class="cv-head"><div><div class="cv-label cv-mono"><span class="cv-num">04</span>Día a día</div><h2 class="cv-h2 cv-disp"><span data-ventas>Lo invertido y lo que volvió</span><span data-sin-ventas hidden>Inversión y resultados por día</span></h2></div><p class="cv-intro">Barras: inversión diaria.<span data-ventas> Línea de color: lo vendido por WhatsApp ese día.</span> Línea blanca: <span data-tipo="mensajes">conversaciones</span><span data-tipo="ventas" hidden>compras web</span>.</p></div>
     <div class="cv-chartbox">
-      <div class="cv-legend cv-mono"><span><i style="background:#9B72FF"></i>Inversión (₲)</span><span><i class="l" style="background:var(--cl)"></i>Vendido (₲)</span><span><i class="l" style="background:#FFFFFF"></i><span data-tipo="mensajes">Conversaciones</span><span data-tipo="ventas" hidden>Compras web</span></span></div>
+      <div class="cv-legend cv-mono"><span><i style="background:#9B72FF"></i>Inversión (₲)</span><span data-ventas><i class="l" style="background:var(--cl)"></i>Vendido (₲)</span><span><i class="l" style="background:#FFFFFF"></i><span data-tipo="mensajes">Conversaciones</span><span data-tipo="ventas" hidden>Compras web</span></span></div>
       <div class="cv-chart" id="grafico-diario" data-source="serie" data-draw="grafico"></div>
     </div>
   </section>
@@ -131,15 +133,11 @@
     </div>
   </section>
 
-  <section class="cv-equipo" id="lectura-equipo">
+  <section class="cv-equipo" id="lectura-equipo" hidden>
     <div class="cv-wrap">
-      <div class="cv-label cv-mono">07 · Lectura del equipo</div>
+      <div class="cv-label cv-mono">07 · Lectura del equipo<span data-draw="notas-mes"></span></div>
       <h2 class="cv-h2 cv-disp">Lo que vemos y lo que <span class="v">hacemos ahora</span></h2>
-      <div class="cv-notas">
-        <div class="cv-nota" id="nota-hicimos" data-read lang="es"><div class="k cv-mono">Lo que hicimos</div><h3>[Título corto]</h3><p>[Qué campañas lanzamos, qué cambiamos y por qué.]</p></div>
-        <div class="cv-nota" id="nota-aprendimos" data-read lang="es"><div class="k cv-mono">Lo que aprendimos</div><h3>[Título corto]</h3><p>[Qué funcionó mejor: el anuncio, el público o el mensaje.]</p></div>
-        <div class="cv-nota" id="nota-proximos" data-read lang="es"><div class="k cv-mono">Próximos pasos</div><h3>[Título corto]</h3><p>[Qué vamos a probar el próximo período y qué esperamos lograr.]</p></div>
-      </div>
+      <div class="cv-notas" data-draw="notas"></div>
       <div class="cv-firma cv-mono">— Equipo swipe digital</div>
     </div>
   </section>

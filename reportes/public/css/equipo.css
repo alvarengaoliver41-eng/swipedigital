@@ -12,8 +12,10 @@
 .eq-cli .tipo{font-family:'SW Mono','JetBrains Mono',monospace;font-size:10.5px;letter-spacing:1.3px;text-transform:uppercase;color:var(--gris)}
 .eq-cli .cifra{font-size:14px;color:var(--texto2)}
 .eq-cli .cifra b{color:#FFFFFF;font-weight:600}
-.eq-cli .acc{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:auto}
-.eq-cli .acc button,.eq-cli .acc a{background:none;border:0;padding:0;color:var(--violeta-txt);font:inherit;font-size:13px;cursor:pointer;text-decoration:none}
+.eq-cli .acc{display:flex;flex-wrap:wrap;gap:8px;margin-top:auto;padding-top:4px}
+.eq-cli .acc button,.eq-cli .acc a{background:var(--grafito2);border:1px solid var(--borde);border-radius:999px;padding:8px 13px;color:#FFFFFF;font:inherit;font-size:13px;font-weight:500;cursor:pointer;text-decoration:none;line-height:1.2}
+.eq-cli .acc .prin{background:var(--violeta);border-color:var(--violeta);color:#0A0A0B;font-weight:600}
+.eq-cli .acc button:hover,.eq-cli .acc a:hover{border-color:#3A3A44}
 .eq-sel-cliente{font-size:inherit!important;font-family:'SW Montserrat',Montserrat,sans-serif!important;font-weight:800!important;padding:4px 40px 6px 16px!important;vertical-align:middle;letter-spacing:-0.03em}
 .eq-select{background:var(--grafito);border:1px solid var(--borde);border-radius:10px;padding:10px 12px;color:#FFFFFF;font-family:'SW Inter',Inter,system-ui,sans-serif;font-size:14px;letter-spacing:0;text-transform:none}
 .eq-check{flex-direction:row!important;align-items:center;gap:10px!important;text-transform:none!important;letter-spacing:0!important;font-size:14px!important;color:var(--texto2)!important;font-family:'SW Inter',Inter,sans-serif!important}
@@ -28,3 +30,52 @@
 .eq-ayuda{font-size:12px;color:var(--gris);text-transform:none;letter-spacing:0}
 .eq-borrar{margin-left:auto;color:var(--mal)!important;border-color:color-mix(in srgb,var(--mal) 45%,transparent)!important}
 .eq-cli .logo{height:28px;max-width:120px;object-fit:contain}
+
+/* Cabecera de carga con selector de cliente */
+.eq-cab{display:flex;flex-direction:column;align-items:flex-start;gap:12px}
+.eq-cab .eq-sel-cliente{font-size:clamp(22px,3vw,30px)!important}
+.eq-tabs{display:flex;gap:6px;margin:20px 0 22px;padding:5px;background:var(--grafito);border:1px solid var(--borde);border-radius:999px;width:max-content;max-width:100%}
+.eq-tabs button{background:none;border:0;border-radius:999px;padding:9px 18px;color:var(--texto2);font-family:'SW Inter',Inter,system-ui,sans-serif;font-size:14px;font-weight:500;cursor:pointer;white-space:nowrap}
+.eq-tabs button[aria-selected="true"]{background:var(--violeta);color:#0A0A0B;font-weight:600}
+.eq-ayuda-tab{max-width:620px;margin:0 0 18px}
+.cv-form label i{font-style:normal;text-transform:none;letter-spacing:0;color:#6E6E76;font-family:'SW Inter',Inter,sans-serif;font-size:11.5px}
+.cv-form textarea{background:var(--grafito);border:1px solid var(--borde);border-radius:10px;padding:10px 12px;color:#FFFFFF;font-family:'SW Inter',Inter,system-ui,sans-serif;font-size:14px;line-height:1.5;letter-spacing:0;text-transform:none;resize:vertical;min-height:84px}
+.cv-form textarea:focus{outline:2px solid var(--violeta);outline-offset:1px}
+.cv-form input::placeholder,.cv-form textarea::placeholder{color:#5E5E66}
+.eq-bloque{border:1px solid var(--borde);border-radius:16px;padding:14px 16px 16px;margin:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:12px}
+.eq-bloque legend{font-family:'SW Montserrat',Montserrat,sans-serif;font-weight:800;font-size:15px;letter-spacing:-0.02em;color:#FFFFFF;padding:0 6px}
+.eq-dias{margin-top:22px}
+.cv-form .acciones .cv-link{padding:0}
+
+/* Ventana del editor de clientes */
+.eq-modal{position:fixed;inset:0;z-index:50;background:rgba(5,5,7,.72);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:24px}
+.eq-modal-caja{width:min(820px,100%);max-height:calc(100vh - 48px);overflow:auto;background:#0F0F12;border:1px solid #2E2A3A;border-radius:24px;padding:clamp(20px,3vw,30px);box-shadow:0 30px 80px rgba(0,0,0,.6)}
+.eq-modal-cab{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.eq-modal-cab h2{font-size:clamp(24px,3vw,32px);letter-spacing:-0.04em;margin:0;line-height:1.1}
+.eq-cerrar{flex:none;width:38px;height:38px;border-radius:50%;border:1px solid var(--borde);background:var(--grafito);color:#FFFFFF;font-size:22px;line-height:1;cursor:pointer}
+.eq-modal-caja>.cv-intro{max-width:none;margin:8px 0 20px}
+body.eq-sin-scroll{overflow:hidden}
+
+@media (max-width:640px){
+  .eq-cli{padding:18px;border-radius:16px}
+  .eq-cli .nom{font-size:20px}
+  .cv-carga{padding:18px;border-radius:18px;border-style:solid;border-color:var(--borde)}
+  .eq-tabs{width:100%;justify-content:stretch}
+  .eq-tabs button{flex:1;padding:9px 6px;font-size:13px}
+  .cv-form{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px}
+  .cv-form input:not([type=checkbox]),.cv-form select,.cv-form textarea{width:100%;max-width:100%}
+  .eq .cv-top{flex-wrap:nowrap}
+  .eq .cv-top-r{width:auto}
+  .eq .cv-cobrand .cv-label{display:none}
+  .cv-form .m-full,.eq-form-login label{grid-column:1/-1}
+  .cv-form .acciones .cv-btn{flex:1;min-width:140px;padding:13px 20px}
+  .eq-bloque{grid-template-columns:1fr;padding:12px 14px 14px}
+  .eq-modal{padding:0;align-items:flex-end}
+  .eq-modal-caja{max-height:92vh;border-radius:22px 22px 0 0;border-bottom:0;padding:20px 18px calc(20px + env(safe-area-inset-bottom))}
+  .eq-logo-vista{width:140px;height:72px}
+  .eq-borrar{margin-left:0;flex-basis:100%}
+  .eq-dias .cv-table tr{grid-template-columns:1fr 1fr 1fr}
+  .eq-dias .cv-table td.vacia{display:none}
+  .eq-dias .cv-table td.sub{grid-column:1/-1}
+  .cv-top-r .eq-usuario{display:none}
+}

@@ -52,42 +52,75 @@
 
     <section class="cv-sec cv-wrap" id="carga">
       <div class="cv-carga">
-        <div class="cv-head"><div><div class="cv-label cv-mono"><span class="cv-num">02</span>Cargar ventas</div><h2 class="cv-h2 cv-disp" style="margin-top:10px">Ventas del día de <select class="cv-select eq-sel-cliente" id="sel-cliente" aria-label="Cliente"></select></h2></div>
-          <p class="cv-intro">Con lo que pasan los vendedores al cierre. Si cargás un día que ya existe, se reemplaza.</p></div>
-        <form class="cv-form" id="form-dia" autocomplete="off">
-          <label>Fecha<input type="date" name="fecha" required></label>
-          <label>Cantidad de ventas<input type="number" name="ventas" min="0" step="1" inputmode="numeric" required></label>
-          <label>Monto total (₲)<input type="number" name="monto" min="0" step="1" inputmode="numeric" required></label>
-          <label>Venta más alta (₲)<input type="number" name="maximo" min="0" step="1" inputmode="numeric" placeholder="Opcional"></label>
-          <label class="full">Nota<input type="text" name="nota" maxlength="200" placeholder="Opcional: promo del día, algo que pasó"></label>
-          <div class="acciones"><button type="submit" class="cv-btn">Guardar día</button><span class="cv-msg" id="msg-dia"></span></div>
-        </form>
-        <div class="cv-tablewrap">
-          <table class="cv-table">
-            <thead><tr><th>Fecha</th><th class="n">Ventas</th><th class="n">Monto total</th><th class="n">Venta más alta</th><th>Nota</th><th></th></tr></thead>
-            <tbody id="tabla-dias"></tbody>
-          </table>
+        <div class="eq-cab">
+          <div class="cv-label cv-mono"><span class="cv-num">02</span>Cargar datos</div>
+          <label class="eq-cab-sel"><span class="cv-oculto">Cliente</span><select class="cv-select eq-sel-cliente" id="sel-cliente" aria-label="Cliente"></select></label>
+        </div>
+        <div class="eq-tabs" role="tablist">
+          <button type="button" role="tab" data-tab="ventas" aria-selected="true">Ventas del día</button>
+          <button type="button" role="tab" data-tab="meta" aria-selected="false">Meta del mes</button>
+          <button type="button" role="tab" data-tab="lectura" aria-selected="false">Lectura</button>
         </div>
 
-        <h3 class="cv-h3">Meta del mes</h3>
-        <form class="cv-form" id="form-meta" autocomplete="off">
-          <label>Mes<input type="month" name="mes" required></label>
-          <label>Meta de ventas (₲)<input type="number" name="monto" min="1" step="1" inputmode="numeric" required></label>
-          <label>Meta de cantidad<input type="number" name="ventas" min="0" step="1" inputmode="numeric" placeholder="Opcional"></label>
-          <div class="acciones"><button type="submit" class="cv-btn">Guardar meta</button><span class="cv-msg" id="msg-meta"></span></div>
-        </form>
+        <div data-panel="ventas">
+          <p class="cv-intro eq-ayuda-tab">Con lo que pasan los vendedores al cierre. Si cargás un día que ya existe, se reemplaza.</p>
+          <form class="cv-form" id="form-dia" autocomplete="off">
+            <label class="m-full">Fecha<input type="date" name="fecha" required></label>
+            <label>Ventas<input type="number" name="ventas" min="0" step="1" inputmode="numeric" required></label>
+            <label>Monto total (₲)<input type="number" name="monto" min="0" step="1" inputmode="numeric" required></label>
+            <label class="m-full"><span>Venta más alta (₲) <i>opcional</i></span><input type="number" name="maximo" min="0" step="1" inputmode="numeric"></label>
+            <label class="full"><span>Nota <i>opcional</i></span><input type="text" name="nota" maxlength="200"></label>
+            <div class="acciones"><button type="submit" class="cv-btn">Guardar día</button><span class="cv-msg" id="msg-dia"></span></div>
+          </form>
+          <div class="cv-tablewrap eq-dias">
+            <table class="cv-table">
+              <thead><tr><th>Fecha</th><th class="n">Ventas</th><th class="n">Monto total</th><th class="n">Venta más alta</th><th>Nota</th><th></th></tr></thead>
+              <tbody id="tabla-dias"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div data-panel="meta" hidden>
+          <p class="cv-intro eq-ayuda-tab">La meta aparece en el reporte con un anillo de avance y un semáforo según el ritmo del mes.</p>
+          <form class="cv-form" id="form-meta" autocomplete="off">
+            <label class="m-full">Mes<input type="month" name="mes" required></label>
+            <label>Meta de ventas (₲)<input type="number" name="monto" min="1" step="1" inputmode="numeric" required></label>
+            <label><span>Cantidad <i>opcional</i></span><input type="number" name="ventas" min="0" step="1" inputmode="numeric"></label>
+            <div class="acciones"><button type="submit" class="cv-btn">Guardar meta</button><span class="cv-msg" id="msg-meta"></span></div>
+          </form>
+        </div>
+
+        <div data-panel="lectura" hidden>
+          <p class="cv-intro eq-ayuda-tab">Lo que el cliente lee al final de su reporte. Se muestra la lectura del mes más reciente; los bloques vacíos no aparecen.</p>
+          <form class="cv-form eq-form-notas" id="form-notas" autocomplete="off">
+            <label class="m-full">Mes<input type="month" name="mes" required></label>
+            <fieldset class="full eq-bloque"><legend>Lo que hicimos</legend>
+              <label>Título<input type="text" name="hicimos_titulo" maxlength="90" placeholder="Ej.: Lanzamos la campaña de Black Friday"></label>
+              <label>Detalle<textarea name="hicimos_texto" maxlength="600" rows="3" placeholder="Qué campañas lanzamos, qué cambiamos y por qué."></textarea></label>
+            </fieldset>
+            <fieldset class="full eq-bloque"><legend>Lo que aprendimos</legend>
+              <label>Título<input type="text" name="aprendimos_titulo" maxlength="90" placeholder="Ej.: El video corto gana"></label>
+              <label>Detalle<textarea name="aprendimos_texto" maxlength="600" rows="3" placeholder="Qué funcionó mejor: el anuncio, el público o el mensaje."></textarea></label>
+            </fieldset>
+            <fieldset class="full eq-bloque"><legend>Próximos pasos</legend>
+              <label>Título<input type="text" name="proximos_titulo" maxlength="90" placeholder="Ej.: Escalar sin perder costo"></label>
+              <label>Detalle<textarea name="proximos_texto" maxlength="600" rows="3" placeholder="Qué vamos a probar y qué esperamos lograr."></textarea></label>
+            </fieldset>
+            <div class="acciones"><button type="submit" class="cv-btn">Guardar lectura</button><a class="cv-link" id="ver-lectura" target="_blank" rel="noopener">Ver en el reporte</a><span class="cv-msg" id="msg-notas"></span></div>
+          </form>
+        </div>
       </div>
     </section>
 
-    <section class="cv-sec cv-wrap" id="editor-cliente" hidden>
-      <div class="cv-carga">
-        <div class="cv-head"><div><div class="cv-label cv-mono"><span class="cv-num">03</span>Cliente</div><h2 class="cv-h2 cv-disp" style="margin-top:10px" id="titulo-editor">Agregar cliente</h2></div>
-          <p class="cv-intro">La cuenta de Meta tiene que estar asignada al usuario del sistema de la agencia, si no el reporte no va a poder leerla.</p></div>
+    <section class="eq-modal" id="editor-cliente" hidden role="dialog" aria-modal="true" aria-labelledby="titulo-editor">
+      <div class="eq-modal-caja">
+        <div class="eq-modal-cab"><h2 class="cv-disp" id="titulo-editor">Agregar cliente</h2><button type="button" class="eq-cerrar" id="btn-cerrar-editor" aria-label="Cerrar">×</button></div>
+        <p class="cv-intro">La cuenta de Meta tiene que estar asignada al usuario del sistema "Reportes"; si no, el reporte no va a poder leerla.</p>
         <form class="cv-form" id="form-cliente" autocomplete="off">
-          <label>Nombre<input type="text" name="nombre" maxlength="80" required></label>
-          <label>Identificador<input type="text" name="slug" maxlength="40" pattern="[a-z0-9\-]{2,40}" placeholder="ej. vecab" required></label>
-          <label>Cuenta de Meta (ID)<input type="text" name="meta_ad_account_id" pattern="(act_)?[0-9]{5,25}" placeholder="ej. 1667857001714420" required></label>
-          <label>Objetivo principal<select name="tipo" class="eq-select"><option value="mensajes">Conversaciones de WhatsApp</option><option value="ventas">Ventas web</option></select></label>
+          <label class="m-full">Nombre<input type="text" name="nombre" maxlength="80" required></label>
+          <label class="m-full">Identificador (para el link)<input type="text" name="slug" maxlength="40" pattern="[a-z0-9\-]{2,40}" placeholder="ej. vecab" required></label>
+          <label class="m-full">Cuenta de Meta (ID)<input type="text" name="meta_ad_account_id" pattern="(act_)?[0-9]{5,25}" placeholder="ej. 1667857001714420" required></label>
+          <label class="m-full">Objetivo principal<select name="tipo" class="eq-select"><option value="mensajes">Conversaciones de WhatsApp</option><option value="ventas">Ventas web</option></select></label>
           <div class="full eq-logo">
             <div class="eq-logo-vista" id="logo-vista"><span>Sin logo</span></div>
             <div class="eq-logo-acc">
@@ -96,11 +129,10 @@
               <span class="eq-ayuda">PNG, JPG o WEBP de hasta 2 MB. Mejor con fondo transparente.</span>
             </div>
           </div>
-          <label class="eq-check"><input type="checkbox" name="activo" checked> Reporte activo</label>
+          <label class="eq-check full"><input type="checkbox" name="activo" checked> Reporte activo (si lo desmarcás, el link deja de mostrar datos)</label>
           <div class="acciones">
             <button type="submit" class="cv-btn">Guardar cliente</button>
             <button type="button" class="cv-btn sec" id="btn-rotar" hidden>Generar link nuevo</button>
-            <button type="button" class="cv-btn sec" id="btn-cancelar-cliente">Cancelar</button>
             <button type="button" class="cv-btn sec eq-borrar" id="btn-borrar-cliente" hidden>Borrar cliente</button>
             <span class="cv-msg" id="msg-cliente"></span>
           </div>

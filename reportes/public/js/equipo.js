@@ -115,7 +115,7 @@ function dibujarClientes(vendido, metas) {
       el('div', {class: 'cifra'}, 'Vendido este mes: ', el('b', {}, gs(v.monto)), ` en ${nf0.format(v.ventas)} ventas`),
       el('div', {class: 'cifra'}, meta ? ['Meta: ', el('b', {}, gs(meta.monto)), ` · ${avance} % cumplido`] : 'Sin meta para este mes'),
       el('div', {class: 'acc'},
-        el('button', {type: 'button', onclick: () => elegirCliente(c.id)}, 'Cargar ventas'),
+        el('button', {type: 'button', class: 'prin', onclick: () => elegirCliente(c.id)}, 'Cargar datos'),
         copiar,
         el('a', {href: linkReporte(c), target: '_blank', rel: 'noopener'}, 'Ver reporte'),
         el('button', {type: 'button', onclick: () => abrirEditor(c)}, 'Editar')));
@@ -126,9 +126,17 @@ function elegirCliente(id) {
   clienteSel = id;
   $('#sel-cliente').value = id;
   cargarDias();
+  verTab('ventas');
   $('#carga').scrollIntoView({behavior: 'smooth', block: 'start'});
 }
 $('#sel-cliente').addEventListener('change', (ev) => { clienteSel = ev.target.value; cargarDias(); });
+
+// ===== Pestañas: ventas, meta y lectura =====
+function verTab(nombre) {
+  document.querySelectorAll('.eq-tabs [data-tab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === nombre)));
+  document.querySelectorAll('[data-panel]').forEach((p) => { p.hidden = p.dataset.panel !== nombre; });
+}
+document.querySelectorAll('.eq-tabs [data-tab]').forEach((b) => b.addEventListener('click', () => verTab(b.dataset.tab)));
 
 // ===== Ventas por día =====
 async function cargarDias() {
@@ -147,15 +155,40 @@ async function cargarDias() {
         if (e) { borrar.disabled = false; borrar.textContent = 'No se pudo borrar'; } else cargarClientes();
       }}, 'Borrar');
       return el('tr', {},
-        el('td', {class: 'nom'}, fechaCorta(r.fecha)), el('td', {class: 'n'}, nf0.format(r.ventas)), el('td', {class: 'n'}, gs(r.monto)),
-        el('td', {class: 'n'}, r.maximo ? gs(r.maximo) : '—'), el('td', {class: 'sub'}, r.nota || ''),
-        el('td', {class: 'n'}, el('button', {type: 'button', class: 'cv-link', onclick: () => editarDia(r)}, 'Editar'), borrar));
+        el('td', {class: 'nom'}, fechaCorta(r.fecha)), el('td', {class: 'n', 'data-label': 'Ventas'}, nf0.format(r.ventas)), el('td', {class: 'n', 'data-label': 'Monto total'}, gs(r.monto)),
+        el('td', {class: 'n', 'data-label': 'Venta más alta'}, r.maximo ? gs(r.maximo) : '—'), r.nota ? el('td', {class: 'sub', 'data-label': 'Nota'}, r.nota) : el('td', {class: 'sub vacia'}, ''),
+        el('td', {class: 'n acc'}, el('button', {type: 'button', class: 'cv-link', onclick: () => editarDia(r)}, 'Editar'), borrar));
     }));
   }
   const fm = $('#form-meta');
   const {data: meta} = await sb.from('metas').select('*').eq('cliente_id', clienteSel).eq('mes', fm.elements.mes.value || mesActual()).maybeSingle();
   fm.elements.monto.value = meta?.monto ?? ''; fm.elements.ventas.value = meta?.ventas ?? '';
+  await cargarNota();
 }
+
+// ===== Lectura del equipo =====
+const CAMPOS_NOTA = ['hicimos_titulo', 'hicimos_texto', 'aprendimos_titulo', 'aprendimos_texto', 'proximos_titulo', 'proximos_texto'];
+async function cargarNota() {
+  const f = $('#form-notas');
+  msg('msg-notas', '');
+  const c = clientes.find((x) => x.id === clienteSel);
+  const ver = $('#ver-lectura');
+  if (c) ver.href = linkReporte(c) + '#lectura-equipo';
+  if (!clienteSel) return;
+  const {data} = await sb.from('notas').select('*').eq('cliente_id', clienteSel).eq('mes', f.elements.mes.value || mesActual()).maybeSingle();
+  for (const k of CAMPOS_NOTA) f.elements[k].value = data?.[k] ?? '';
+}
+$('#form-notas').elements.mes.addEventListener('change', () => cargarNota());
+$('#form-notas').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const f = ev.target;
+  if (!clienteSel || !/^\d{4}-\d{2}$/.test(f.elements.mes.value)) { msg('msg-notas', 'Revisá el mes.', 'mal'); return; }
+  const fila = {cliente_id: clienteSel, mes: f.elements.mes.value, actualizado: new Date().toISOString()};
+  for (const k of CAMPOS_NOTA) fila[k] = f.elements[k].value.trim() || null;
+  const {error} = await sb.from('notas').upsert(fila, {onConflict: 'cliente_id,mes'});
+  if (error) { msg('msg-notas', 'No se pudo guardar: ' + error.message, 'mal'); return; }
+  msg('msg-notas', 'Lectura guardada.', 'ok');
+});
 
 function editarDia(r) {
   const f = $('#form-dia');
@@ -209,11 +242,23 @@ function abrirEditor(c) {
   borrar.dataset.seguro = ''; borrar.textContent = 'Borrar cliente';
   mostrar('btn-borrar-cliente', !!c);
   msg('msg-cliente', '');
-  mostrar('editor-cliente', true);
-  $('#editor-cliente').scrollIntoView({behavior: 'smooth', block: 'start'});
+  abrirModal();
 }
 $('#btn-nuevo-cliente').addEventListener('click', () => abrirEditor(null));
-$('#btn-cancelar-cliente').addEventListener('click', () => { editando = null; mostrar('editor-cliente', false); });
+function abrirModal() {
+  mostrar('editor-cliente', true);
+  document.body.classList.add('eq-sin-scroll');
+  $('#editor-cliente .eq-modal-caja').scrollTop = 0;
+  if (window.innerWidth > 640) setTimeout(() => $('#form-cliente').elements.nombre.focus({preventScroll: true}), 50);
+}
+function cerrarEditor() {
+  editando = null;
+  mostrar('editor-cliente', false);
+  document.body.classList.remove('eq-sin-scroll');
+}
+$('#btn-cerrar-editor').addEventListener('click', cerrarEditor);
+$('#editor-cliente').addEventListener('click', (ev) => { if (ev.target.id === 'editor-cliente') cerrarEditor(); });
+document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && !$('#editor-cliente').hidden) cerrarEditor(); });
 
 function verLogo(src) {
   const caja = $('#logo-vista');
@@ -256,8 +301,7 @@ $('#btn-borrar-cliente').addEventListener('click', async (ev) => {
   if (error) { msg('msg-cliente', 'No se pudo borrar: ' + error.message, 'mal'); return; }
   await borrarLogoViejo(editando.logo_url).catch(() => {});
   if (clienteSel === editando.id) clienteSel = null;
-  editando = null;
-  mostrar('editor-cliente', false);
+  cerrarEditor();
   await cargarClientes();
 });
 
@@ -283,8 +327,7 @@ $('#form-cliente').addEventListener('submit', async (ev) => {
   if (error) { msg('msg-cliente', error.code === '23505' ? 'Ese identificador ya existe.' : 'No se pudo guardar: ' + error.message, 'mal'); return; }
   if (logoNuevo !== undefined && logoAnterior && logoAnterior !== fila.logo_url) await borrarLogoViejo(logoAnterior).catch(() => {});
   logoNuevo = undefined;
-  editando = null;
-  mostrar('editor-cliente', false);
+  cerrarEditor();
   msg('msg-cliente', '');
   await cargarClientes();
 });
@@ -302,4 +345,5 @@ $('#btn-rotar').addEventListener('click', async (ev) => {
 
 $('#form-dia').elements.fecha.value = hoyISO();
 $('#form-meta').elements.mes.value = mesActual();
+$('#form-notas').elements.mes.value = mesActual();
 iniciar();
