@@ -19,3 +19,12 @@
 .eq-check{flex-direction:row!important;align-items:center;gap:10px!important;text-transform:none!important;letter-spacing:0!important;font-size:14px!important;color:var(--texto2)!important;font-family:'SW Inter',Inter,sans-serif!important}
 .eq-check input{width:18px;height:18px;accent-color:var(--violeta)}
 .cv-form select{min-width:0}
+.eq-logo{display:flex;flex-wrap:wrap;align-items:center;gap:16px}
+.eq-logo-vista{width:180px;height:84px;border:1px dashed var(--borde);border-radius:14px;display:grid;place-items:center;background:var(--negro);overflow:hidden}
+.eq-logo-vista img{max-width:150px;max-height:60px;object-fit:contain}
+.eq-logo-vista span{font-size:12px;color:var(--gris)}
+.eq-logo-acc{display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+.eq-subir{cursor:pointer;text-transform:none!important;letter-spacing:0!important;font-family:'SW Inter',Inter,system-ui,sans-serif!important;font-size:14px!important;font-weight:600!important;color:#FFFFFF!important;flex-direction:row!important}
+.eq-ayuda{font-size:12px;color:var(--gris);text-transform:none;letter-spacing:0}
+.eq-borrar{margin-left:auto;color:var(--mal)!important;border-color:color-mix(in srgb,var(--mal) 45%,transparent)!important}
+.eq-cli .logo{height:28px;max-width:120px;object-fit:contain}

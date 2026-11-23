@@ -28,6 +28,9 @@ let sb = null;
 let clientes = [];
 let clienteSel = null;
 let editando = null;
+let logoNuevo; // undefined: sin cambios · null: quitar · File: subir este archivo
+const LOGO_MAX = 2 * 1024 * 1024;
+const LOGO_TIPOS = {'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp'};
 
 async function iniciar() {
   try {
@@ -107,7 +110,7 @@ function dibujarClientes(vendido, metas) {
       setTimeout(() => { copiar.textContent = 'Copiar link'; }, 2000);
     }}, 'Copiar link');
     return el('div', {class: 'eq-cli' + (c.activo ? '' : ' inactivo')},
-      el('div', {class: 'top'}, el('div', {}, el('div', {class: 'nom'}, c.nombre), el('div', {class: 'tipo'}, c.tipo === 'ventas' ? 'Ventas web' : 'Conversaciones de WhatsApp')),
+      el('div', {class: 'top'}, el('div', {}, c.logo_url ? el('img', {class: 'logo', src: c.logo_url, alt: c.nombre}) : el('div', {class: 'nom'}, c.nombre), el('div', {class: 'tipo'}, c.tipo === 'ventas' ? 'Ventas web' : 'Conversaciones de WhatsApp')),
         c.activo ? null : el('span', {class: 'tipo'}, 'Inactivo')),
       el('div', {class: 'cifra'}, 'Vendido este mes: ', el('b', {}, gs(v.monto)), ` en ${nf0.format(v.ventas)} ventas`),
       el('div', {class: 'cifra'}, meta ? ['Meta: ', el('b', {}, gs(meta.monto)), ` · ${avance} % cumplido`] : 'Sin meta para este mes'),
@@ -197,15 +200,66 @@ function abrirEditor(c) {
   $('#titulo-editor').textContent = c ? `Editar ${c.nombre}` : 'Agregar cliente';
   if (c) {
     f.elements.nombre.value = c.nombre; f.elements.slug.value = c.slug; f.elements.meta_ad_account_id.value = c.meta_ad_account_id;
-    f.elements.tipo.value = c.tipo; f.elements.logo_url.value = c.logo_url || ''; f.elements.activo.checked = !!c.activo;
+    f.elements.tipo.value = c.tipo; f.elements.activo.checked = !!c.activo;
   }
+  logoNuevo = undefined;
+  verLogo(c?.logo_url || null);
   mostrar('btn-rotar', !!c);
+  const borrar = $('#btn-borrar-cliente');
+  borrar.dataset.seguro = ''; borrar.textContent = 'Borrar cliente';
+  mostrar('btn-borrar-cliente', !!c);
   msg('msg-cliente', '');
   mostrar('editor-cliente', true);
   $('#editor-cliente').scrollIntoView({behavior: 'smooth', block: 'start'});
 }
 $('#btn-nuevo-cliente').addEventListener('click', () => abrirEditor(null));
 $('#btn-cancelar-cliente').addEventListener('click', () => { editando = null; mostrar('editor-cliente', false); });
+
+function verLogo(src) {
+  const caja = $('#logo-vista');
+  caja.replaceChildren(src ? el('img', {src, alt: 'Logo'}) : el('span', {}, 'Sin logo'));
+  mostrar('btn-quitar-logo', !!src);
+}
+$('#form-cliente').elements.logo.addEventListener('change', (ev) => {
+  const f = ev.target.files[0];
+  ev.target.value = '';
+  if (!f) return;
+  if (!LOGO_TIPOS[f.type]) { msg('msg-cliente', 'El logo tiene que ser PNG, JPG o WEBP.', 'mal'); return; }
+  if (f.size > LOGO_MAX) { msg('msg-cliente', 'El logo pesa más de 2 MB. Achicalo y probá de nuevo.', 'mal'); return; }
+  logoNuevo = f;
+  msg('msg-cliente', '');
+  verLogo(URL.createObjectURL(f));
+});
+$('#btn-quitar-logo').addEventListener('click', () => { logoNuevo = null; verLogo(null); });
+
+// Sube el logo a Supabase Storage y devuelve su dirección pública.
+async function subirLogo(slug, archivo) {
+  const ruta = `${slug}-${Date.now()}.${LOGO_TIPOS[archivo.type]}`;
+  const {error} = await sb.storage.from('logos').upload(ruta, archivo, {contentType: archivo.type, cacheControl: '31536000'});
+  if (error) throw error;
+  return sb.storage.from('logos').getPublicUrl(ruta).data.publicUrl;
+}
+// Borra del almacenamiento un logo que se subió desde el panel (los demás se dejan).
+async function borrarLogoViejo(url) {
+  const marca = '/storage/v1/object/public/logos/';
+  if (!url || !url.includes(marca)) return;
+  await sb.storage.from('logos').remove([decodeURIComponent(url.split(marca)[1])]);
+}
+
+$('#btn-borrar-cliente').addEventListener('click', async (ev) => {
+  const b = ev.target;
+  if (!editando) return;
+  if (b.dataset.seguro !== '1') { b.dataset.seguro = '1'; b.textContent = `¿Seguro? Se borran ${editando.nombre}, sus ventas y metas`; return; }
+  b.disabled = true;
+  const {error} = await sb.from('clientes').delete().eq('id', editando.id);
+  b.disabled = false;
+  if (error) { msg('msg-cliente', 'No se pudo borrar: ' + error.message, 'mal'); return; }
+  await borrarLogoViejo(editando.logo_url).catch(() => {});
+  if (clienteSel === editando.id) clienteSel = null;
+  editando = null;
+  mostrar('editor-cliente', false);
+  await cargarClientes();
+});
 
 $('#form-cliente').addEventListener('submit', async (ev) => {
   ev.preventDefault();
@@ -215,15 +269,23 @@ $('#form-cliente').addEventListener('submit', async (ev) => {
     slug: f.elements.slug.value.trim().toLowerCase(),
     meta_ad_account_id: f.elements.meta_ad_account_id.value.trim().replace(/^act_/, ''),
     tipo: f.elements.tipo.value,
-    logo_url: f.elements.logo_url.value.trim() || null,
     activo: f.elements.activo.checked,
   };
-  if (fila.logo_url && !/^(\/|https:\/\/)/.test(fila.logo_url)) { msg('msg-cliente', 'El logo tiene que empezar con / o https://', 'mal'); return; }
+  const logoAnterior = editando?.logo_url || null;
+  if (logoNuevo === null) fila.logo_url = null;
+  else if (logoNuevo) {
+    msg('msg-cliente', 'Subiendo logo…');
+    try { fila.logo_url = await subirLogo(fila.slug, logoNuevo); }
+    catch (e) { msg('msg-cliente', 'No se pudo subir el logo: ' + e.message, 'mal'); return; }
+  }
   const q = editando ? sb.from('clientes').update(fila).eq('id', editando.id) : sb.from('clientes').insert(fila);
   const {error} = await q;
   if (error) { msg('msg-cliente', error.code === '23505' ? 'Ese identificador ya existe.' : 'No se pudo guardar: ' + error.message, 'mal'); return; }
+  if (logoNuevo !== undefined && logoAnterior && logoAnterior !== fila.logo_url) await borrarLogoViejo(logoAnterior).catch(() => {});
+  logoNuevo = undefined;
   editando = null;
   mostrar('editor-cliente', false);
+  msg('msg-cliente', '');
   await cargarClientes();
 });
 
