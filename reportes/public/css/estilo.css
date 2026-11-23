@@ -1,3 +1,4 @@
+[hidden]{display:none!important}
 html,body{margin:0;background:#0A0A0B}
 .cv{--negro:#0A0A0B;--grafito:#141417;--grafito2:#18181C;--borde:#232328;--gris:#8E8E96;--texto2:#B9B9C0;--violeta:#9B72FF;--violeta-txt:#B79BFF;--ciruela:#22102C;--hueso:#F3F1EC;--ok:#5BD69B;--atento:#F5C451;--mal:#FF8A8A;--cl:#B79BFF;
   background:var(--negro);color:#FFFFFF;font-family:'SW Inter',Inter,system-ui,sans-serif;font-size:15px;line-height:1.5;box-sizing:border-box;overflow:hidden;min-height:100vh}
