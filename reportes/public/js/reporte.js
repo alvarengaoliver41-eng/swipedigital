@@ -89,7 +89,8 @@ dash.calc('serie', {
     return diario.filter((r) => r.date_start).slice().sort((a, b) => (a.date_start < b.date_start ? -1 : 1)).slice(-dias)
       .map((r) => {
         const v = porDia.get(r.date_start);
-        return {fecha: r.date_start, inversion: Number(r.amount_spent) || 0, mensajes: Number(r.mensajes) || 0, compras: Number(r.omni_purchase) || 0, vendido: v ? Number(v.monto) || 0 : null};
+        return {fecha: r.date_start, inversion: Number(r.amount_spent) || 0, mensajes: Number(r.mensajes) || 0, compras: Number(r.omni_purchase) || 0, vendido: v ? Number(v.monto) || 0 : null,
+          impresiones: Number(r.impressions) || 0, clics: Number(r.link_click) || 0};
       });
   },
 });
@@ -475,51 +476,71 @@ dash.draw('galeria', (el) => {
 const objDe = (src) => { const d = dash.data(src); return d.status === 'ok' && d.data && !Array.isArray(d.data) ? d.data : null; };
 const div0 = (a, b) => (a > 0 && b > 0 ? a / b : null);
 const segundos = (v) => nf1.format(v) + ' s';
-// Cada métrica: [etiqueta, cómo calcularla, formato, si conviene que suba o baje, ayuda opcional]
-const GRUPOS = [
-  {t: 'Alcance', items: [
-    ['Personas alcanzadas', (m) => m.alcance, F.n, 'sube'],
-    ['Impresiones', (m) => m.impresiones, F.n, 'sube', 'veces que se mostraron los anuncios'],
-    ['Frecuencia', (m) => m.frecuencia, F.uno, 'neutro', 'veces que cada persona los vio'],
-    ['Costo por mil impresiones', (m) => m.cpm, F.gs, 'baja'],
-  ]},
-  {t: 'Interés', items: [
-    ['Clics en el enlace', (m) => m.clics_enlace, F.n, 'sube'],
-    ['CTR del enlace', (m) => m.ctr_enlace, F.pct, 'sube', 'de cada 100 que vieron, cuántos tocaron'],
-    ['Costo por clic', (m) => m.cpc_enlace, F.gs, 'baja'],
-    ['Clics totales', (m) => m.clics, F.n, 'sube', 'incluye ver más, perfil y reacciones'],
-  ]},
-  {t: 'WhatsApp', items: [
-    ['Conversaciones iniciadas', (m) => m.conversaciones, F.n, 'sube'],
-    ['Costo por conversación', (m) => div0(m.inversion, m.conversaciones), F.gs, 'baja'],
-    ['Contactos nuevos', (m) => m.primeras_respuestas, F.n, 'sube', 'personas que escribieron por primera vez'],
-    ['Conversaciones por cada 100 clics', (m) => div0(m.conversaciones * 100, m.clics_enlace), F.uno, 'sube'],
-  ]},
-  {t: 'Tienda web', items: [
-    ['Visitas a la página', (m) => m.vistas_destino, F.n, 'sube'],
-    ['Agregaron al carrito', (m) => m.carrito, F.n, 'sube'],
-    ['Iniciaron el pago', (m) => m.pagos_iniciados, F.n, 'sube'],
-    ['Compras', (m) => m.compras, F.n, 'sube'],
-    ['Valor de las compras', (m) => m.valor_compras, F.gs, 'sube'],
-    ['Retorno (ROAS)', (m) => div0(m.valor_compras, m.inversion), F.x, 'sube'],
-    ['Costo por compra', (m) => div0(m.inversion, m.compras), F.gs, 'baja'],
-  ]},
-  {t: 'Video', items: [
-    ['Reproducciones de 3 segundos', (m) => m.reproducciones_3s, F.n, 'sube'],
-    ['Retención al inicio', (m) => div0(m.reproducciones_3s * 100, m.impresiones), F.pct1, 'sube', 'de cada 100 impresiones, cuántos miraron 3 segundos'],
-    ['Vieron la mitad', (m) => m.video_50, F.n, 'sube'],
-    ['Vieron hasta el final', (m) => m.video_100, F.n, 'sube'],
-    ['ThruPlays', (m) => m.thruplays, F.n, 'sube', 'vistas completas o de 15 segundos'],
-    ['Tiempo promedio mirando', (m) => m.video_segundos, segundos, 'sube'],
-  ]},
-  {t: 'Interacción', items: [
-    ['Interacciones', (m) => m.interacciones, F.n, 'sube'],
-    ['Reacciones', (m) => m.reacciones, F.n, 'sube'],
-    ['Comentarios', (m) => m.comentarios, F.n, 'sube'],
-    ['Compartidos', (m) => m.compartidos, F.n, 'sube'],
-    ['Guardados', (m) => m.guardados, F.n, 'sube'],
-  ]},
+const svgNS = 'http://www.w3.org/2000/svg';
+const ICONOS = {
+  alcance: 'M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12zm10 3a3 3 0 100-6 3 3 0 000 6z',
+  interes: 'M4 3l7 18 2.5-7.5L21 11 4 3z',
+  whatsapp: 'M21 11.5a8.4 8.4 0 01-12.5 7.4L3 21l2.1-5.3A8.4 8.4 0 1121 11.5z',
+  web: 'M3 4h2l2.4 11h11.2L21 7H6.2M9 20a1 1 0 100-2 1 1 0 000 2zm9 0a1 1 0 100-2 1 1 0 000 2z',
+  video: 'M4 5h11a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V7a2 2 0 012-2zm13 5l5-3v10l-5-3',
+  interaccion: 'M12 20s-7-4.4-9.3-8.6C1 8.3 2.9 5 6.2 5c2 0 3.3 1.1 3.8 2 .5-.9 1.8-2 3.8-2 3.3 0 5.2 3.3 3.5 6.4C19 15.6 12 20 12 20z',
+};
+const icono = (k) => {
+  const s = document.createElementNS(svgNS, 'svg'); s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('aria-hidden', 'true');
+  const p = document.createElementNS(svgNS, 'path'); p.setAttribute('d', ICONOS[k]); s.append(p); return s;
+};
+// Píldora con el cambio frente al período anterior: verde si mejora, rojo si empeora.
+const pildora = (v, w, sentido) => {
+  if (!(w > 0) || v == null) return null;
+  const c = (v - w) / w;
+  const plano = Math.abs(c) < 0.005;
+  const bueno = sentido === 'neutro' || plano ? null : sentido === 'sube' ? c > 0 : c < 0;
+  return nuevo('span', 'cv-pil ' + (bueno == null ? 'neu' : bueno ? 'ok' : 'mal'), (plano ? '= ' : c > 0 ? '↑ ' : '↓ ') + nf0.format(Math.abs(Math.round(c * 100))) + ' %');
+};
+// Mini gráfico del día a día del período.
+const chispa = (valores) => {
+  if (!valores.length || !valores.some((v) => v > 0)) return null;
+  const W = 300, H = 56, max = Math.max(...valores) || 1, paso = valores.length > 1 ? W / (valores.length - 1) : W;
+  const pts = valores.map((v, i) => [i * paso, H - 4 - (v / max) * (H - 10)]);
+  const s = document.createElementNS(svgNS, 'svg'); s.setAttribute('viewBox', `0 0 ${W} ${H}`); s.setAttribute('preserveAspectRatio', 'none'); s.setAttribute('class', 'mx-chispa'); s.setAttribute('aria-hidden', 'true');
+  const linea = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
+  const area = document.createElementNS(svgNS, 'path'); area.setAttribute('d', `${linea} L${W} ${H} L0 ${H} Z`); area.setAttribute('class', 'a');
+  const path = document.createElementNS(svgNS, 'path'); path.setAttribute('d', linea); path.setAttribute('class', 'l');
+  s.append(area, path); return s;
+};
+const serieDe = (campo) => { const d = dash.data('serie'); return d.status === 'ok' && d.data ? d.data.map((r) => Number(r[campo]) || 0) : []; };
+
+// Cada bloque: un número principal, una frase que lo explica y métricas de apoyo.
+const BLOQUES_M = [
+  {id: 'alcance', t: 'Alcance', ancho: true, serie: 'impresiones',
+    principal: ['Personas alcanzadas', (m) => m.alcance, F.n, 'sube'],
+    frase: (m) => m.frecuencia > 0 ? `Cada persona vio los anuncios ${F.uno(m.frecuencia)} veces en promedio.` : null,
+    extras: [['Impresiones', (m) => m.impresiones, F.n, 'sube'], ['Frecuencia', (m) => m.frecuencia, F.uno, 'neutro'], ['Costo por mil impresiones', (m) => m.cpm, F.gs, 'baja']]},
+  {id: 'interes', t: 'Interés', serie: 'clics',
+    principal: ['Clics en el enlace', (m) => m.clics_enlace, F.n, 'sube'],
+    frase: (m) => m.ctr_enlace > 0 ? `De cada 100 personas que vieron un anuncio, ${F.uno(m.ctr_enlace)} tocaron el enlace.` : null,
+    extras: [['Costo por clic', (m) => m.cpc_enlace, F.gs, 'baja'], ['CTR del enlace', (m) => m.ctr_enlace, F.pct, 'sube'], ['Clics totales', (m) => m.clics, F.n, 'sube']]},
+  {id: 'whatsapp', t: 'WhatsApp', serie: 'mensajes', cond: (m) => m.conversaciones > 0,
+    principal: ['Conversaciones iniciadas', (m) => m.conversaciones, F.n, 'sube'],
+    frase: (m) => div0(m.inversion, m.conversaciones) ? `Cada conversación costó ${F.gs(m.inversion / m.conversaciones)}.` : null,
+    extras: [['Costo por conversación', (m) => div0(m.inversion, m.conversaciones), F.gs, 'baja'], ['Contactos nuevos', (m) => m.primeras_respuestas, F.n, 'sube'],
+      ['Por cada 100 clics', (m) => div0(m.conversaciones * 100, m.clics_enlace), F.uno, 'sube']]},
+  {id: 'web', t: 'Tienda web', ancho: true, tipo: 'embudo', cond: (m) => m.vistas_destino > 0 || m.compras > 0 || m.carrito > 0,
+    principal: ['Compras', (m) => m.compras, F.n, 'sube'],
+    frase: (m) => div0(m.valor_compras, m.inversion) ? `Cada ₲ 1 invertido volvió como ₲ ${nf1.format(m.valor_compras / m.inversion)} en compras web.` : null,
+    pasos: [['Visitaron la página', (m) => m.vistas_destino], ['Agregaron al carrito', (m) => m.carrito], ['Iniciaron el pago', (m) => m.pagos_iniciados], ['Compraron', (m) => m.compras]],
+    extras: [['Valor de las compras', (m) => m.valor_compras, F.gs, 'sube'], ['Retorno (ROAS)', (m) => div0(m.valor_compras, m.inversion), F.x, 'sube'], ['Costo por compra', (m) => div0(m.inversion, m.compras), F.gs, 'baja']]},
+  {id: 'video', t: 'Video', ancho: true, tipo: 'retencion', cond: (m) => m.reproducciones_3s > 0 || m.thruplays > 0,
+    principal: ['Reproducciones de 3 segundos', (m) => m.reproducciones_3s, F.n, 'sube'],
+    frase: (m) => div0(m.reproducciones_3s, m.impresiones) ? `${F.pct1((m.reproducciones_3s / m.impresiones) * 100)} de las veces que apareció, la gente se quedó a mirar.` : null,
+    pasos: [['Empezaron', (m) => m.reproducciones_3s], ['25 %', (m) => m.video_25], ['50 %', (m) => m.video_50], ['75 %', (m) => m.video_75], ['Final', (m) => m.video_100]],
+    extras: [['ThruPlays', (m) => m.thruplays, F.n, 'sube'], ['Tiempo promedio', (m) => m.video_segundos, segundos, 'sube'], ['Retención al inicio', (m) => div0(m.reproducciones_3s * 100, m.impresiones), F.pct1, 'sube']]},
+  {id: 'interaccion', t: 'Interacción', tipo: 'iconos', cond: (m) => m.interacciones > 0,
+    principal: ['Interacciones', (m) => m.interacciones, F.n, 'sube'],
+    frase: () => 'Reacciones, comentarios, compartidos y guardados.',
+    extras: [['Reacciones', (m) => m.reacciones, F.n, 'sube'], ['Comentarios', (m) => m.comentarios, F.n, 'sube'], ['Compartidos', (m) => m.compartidos, F.n, 'sube'], ['Guardados', (m) => m.guardados, F.n, 'sube']]},
 ];
+
 dash.draw('dias-periodo', (el) => { el.textContent = ({last_7d: 7, last_14d: 14, last_30d: 30})[dash.params().periodo] || 30; });
 dash.draw('metricas', (el) => {
   const d = dash.data('totales');
@@ -528,27 +549,47 @@ dash.draw('metricas', (el) => {
   if (d.status === 'error') return el.append(nuevo('div', 'cv-empty', 'No se pudieron cargar las métricas.'));
   const t = objDe('totales');
   if (!t || !t.actual) return d.status === 'ok' ? el.append(nuevo('div', 'cv-empty', 'Sin datos en este período.')) : null;
-  const a = t.actual, b = t.anterior;
-  for (const g of GRUPOS) {
-    const filas = g.items.map(([etq, fn, fmt, sentido, ayuda]) => ({etq, v: fn(a), w: b ? fn(b) : null, fmt, sentido, ayuda}))
-      .filter((f) => f.v != null && f.v > 0);
-    if (!filas.length) continue;
-    const card = nuevo('div', 'cv-mcard');
-    card.append(nuevo('div', 'cv-mcard-t cv-mono', g.t));
-    for (const f of filas) {
-      const fila = nuevo('div', 'cv-mfila');
-      const izq = nuevo('div', 'izq');
-      izq.append(nuevo('span', 'etq', f.etq));
-      if (f.ayuda) izq.append(nuevo('span', 'ayu', f.ayuda));
-      const der = nuevo('div', 'der');
-      der.append(nuevo('span', 'v', f.fmt(f.v)));
-      if (f.w > 0) {
-        const c = (f.v - f.w) / f.w;
-        const bueno = f.sentido === 'neutro' || Math.abs(c) < 0.005 ? null : f.sentido === 'sube' ? c > 0 : c < 0;
-        der.append(nuevo('span', 'chg cv-mono ' + (bueno == null ? 'neu' : bueno ? 'ok' : 'mal'), F.cambio(c)));
+  const a = t.actual, b = t.anterior || null;
+  for (const g of BLOQUES_M) {
+    if (g.cond && !g.cond(a)) continue;
+    const [pEtq, pFn, pFmt, pSent] = g.principal;
+    const pv = pFn(a);
+    if (!(pv > 0) && !g.pasos) continue;
+    const card = nuevo('article', 'mx mx-' + g.id + (g.ancho ? ' ancho' : ''));
+    const cab = nuevo('div', 'mx-cab'); const ic = nuevo('span', 'mx-ico'); ic.append(icono(g.id)); cab.append(ic, nuevo('span', 'mx-t cv-mono', g.t)); card.append(cab);
+    const cuerpo = nuevo('div', 'mx-cuerpo');
+    const hero = nuevo('div', 'mx-hero');
+    const fila = nuevo('div', 'mx-num'); fila.append(nuevo('span', 'mx-v cv-disp', pv > 0 ? pFmt(pv) : '0')); const pp = pildora(pv, b && pFn(b), pSent); if (pp) fila.append(pp);
+    hero.append(fila, nuevo('div', 'mx-lbl', pEtq));
+    const fr = g.frase && g.frase(a); if (fr) hero.append(nuevo('p', 'mx-frase', fr));
+    const ch = g.serie ? chispa(serieDe(g.serie)) : null; if (ch) hero.append(ch);
+    cuerpo.append(hero);
+    // Visual propio del bloque: embudo de la tienda o retención del video
+    if (g.pasos) {
+      const vals = g.pasos.map(([e, fn]) => ({e, v: fn(a) || 0})).filter((p, i) => p.v > 0 || i === 0);
+      const max = Math.max(...vals.map((p) => p.v)) || 1;
+      const vis = nuevo('div', 'mx-pasos ' + g.tipo);
+      vals.forEach((p, i) => {
+        const f = nuevo('div', 'paso');
+        const top = nuevo('div', 'top'); top.append(nuevo('span', 'e', p.e), nuevo('span', 'n', F.n(p.v)));
+        const bar = nuevo('div', 'bar'); const fill = nuevo('i'); fill.style.width = Math.max(2, (p.v / max) * 100) + '%'; bar.append(fill);
+        f.append(top, bar);
+        if (i > 0 && vals[i - 1].v > 0) f.append(nuevo('span', 'tasa cv-mono', g.tipo === 'retencion' ? F.frac(p.v / vals[0].v) + ' sigue' : F.frac(p.v / vals[i - 1].v) + ' avanzó'));
+        vis.append(f);
+      });
+      cuerpo.append(vis);
+    }
+    card.append(cuerpo);
+    const minis = g.extras.map(([e, fn, fmt, sent]) => ({e, v: fn(a), w: b ? fn(b) : null, fmt, sent})).filter((x) => x.v != null && x.v > 0);
+    if (minis.length) {
+      const grid = nuevo('div', 'mx-minis' + (g.tipo === 'iconos' ? ' iconos' : ''));
+      for (const x of minis) {
+        const m = nuevo('div', 'mx-mini');
+        m.append(nuevo('span', 'e', x.e));
+        const vv = nuevo('div', 'vv'); vv.append(nuevo('span', 'v', x.fmt(x.v))); const px = pildora(x.v, x.w, x.sent); if (px) vv.append(px);
+        m.append(vv); grid.append(m);
       }
-      fila.append(izq, der);
-      card.append(fila);
+      card.append(grid);
     }
     el.append(card);
   }
@@ -565,13 +606,45 @@ const metricaAud = () => {
   return ['impresiones', 'impresiones'];
 };
 const SINGULAR = {conversaciones: 'conversación', 'compras web': 'compra web', 'clics en el enlace': 'clic en el enlace', impresiones: 'impresión'};
+const POR_UNO = {conversaciones: 'por conversación', compras: 'por compra', clics_enlace: 'por clic'};
 const cantidad = (n, nombre) => `${F.n(n)} ${Math.round(n) === 1 ? SINGULAR[nombre] || nombre : nombre}`;
 const ZONAS = {'asuncion': 'Asunción', 'alto parana': 'Alto Paraná', 'itapua': 'Itapúa', 'paraguari': 'Paraguarí', 'caaguazu': 'Caaguazú', 'caazapa': 'Caazapá',
   'concepcion': 'Concepción', 'guaira': 'Guairá', 'neembucu': 'Ñeembucú', 'boqueron': 'Boquerón', 'canindeyu': 'Canindeyú'};
-const zona = (r) => { const base = String(r || '').replace(/ Department$/i, '').trim(); const k = base.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); return ZONAS[k] || base; };
-const barra = (pct, clase) => { const b = nuevo('span', 'cv-abar ' + (clase || '')); const i = nuevo('i'); i.style.width = Math.max(pct > 0 ? 2 : 0, Math.min(100, pct)) + '%'; b.append(i); return b; };
+const zona = (r) => { const base = String(r || '').replace(/ Department$/i, '').trim(); const k = base.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); return ZONAS[k] || base; };
+const COLORES_PLAT = {Instagram: '#B79BFF', Facebook: '#6E8BFF', Messenger: '#4FD1C5', 'Audience Network': '#F5C451', Threads: '#E9E6F2', WhatsApp: '#5BD69B'};
 const vacioAud = (el) => el.append(nuevo('div', 'cv-empty chico', 'Meta no tiene este dato para el período.'));
+const edadTxt = (e) => String(e).replace('-', ' a ').replace('65+', '65 o más');
+
 dash.draw('aud-metrica', (el) => { el.textContent = 'Según ' + metricaAud()[1]; });
+
+// Conclusiones rápidas arriba de la sección
+dash.draw('aud-claves', (el) => {
+  el.replaceChildren();
+  const s = objDe('segmentos'); if (!s) return;
+  const [k, nombre] = metricaAud();
+  const claves = [];
+  const eg = (s.edad_genero || []).filter((r) => (r.genero === 'female' || r.genero === 'male') && r[k] > 0);
+  const totEg = eg.reduce((t, r) => t + r[k], 0);
+  if (eg.length) {
+    const top = eg.slice().sort((a, b) => b[k] - a[k])[0];
+    claves.push(['Público que más respondió', `${top.genero === 'female' ? 'Mujeres' : 'Hombres'} de ${edadTxt(top.edad)}`, `${F.frac(top[k] / totEg)} de las ${nombre}`]);
+  }
+  const pl = (s.plataformas || []).filter((r) => r[k] > 0 && r.inversion > 0);
+  if (pl.length > 1 && k !== 'impresiones') {
+    const barata = pl.slice().sort((a, b) => a.inversion / a[k] - b.inversion / b[k])[0];
+    claves.push(['Plataforma más rendidora', barata.plataforma, `${F.gs(barata.inversion / barata[k])} ${POR_UNO[k] || ''}`]);
+  } else if (pl.length) claves.push(['Plataforma principal', pl[0].plataforma, `${F.frac(div0(pl[0].inversion, pl.reduce((t, r) => t + r.inversion, 0)) || 0)} de la inversión`]);
+  const rg = (s.regiones || []).filter((r) => r[k] > 0).sort((a, b) => b[k] - a[k]);
+  const totRg = rg.reduce((t, r) => t + r[k], 0);
+  if (rg.length) claves.push(['Zona principal', zona(rg[0].region), `${F.frac(rg[0][k] / totRg)} de las ${nombre}`]);
+  for (const [t, v, sub] of claves) {
+    const c = nuevo('div', 'cv-clave');
+    c.append(nuevo('span', 't cv-mono', t), nuevo('span', 'v cv-disp', v), nuevo('span', 's', sub));
+    el.append(c);
+  }
+});
+
+// Pirámide: mujeres a la izquierda, hombres a la derecha, edades al centro
 dash.draw('aud-edad', (el) => {
   el.replaceChildren();
   const s = objDe('segmentos'); if (!s) return;
@@ -580,61 +653,83 @@ dash.draw('aud-edad', (el) => {
   const total = filas.reduce((t, r) => t + (r[k] || 0), 0);
   if (!total) return vacioAud(el);
   const edades = [...new Set(filas.map((r) => r.edad))].sort();
-  const max = Math.max(...filas.map((r) => r[k] || 0));
-  const ley = nuevo('div', 'cv-aud-ley cv-mono');
+  const val = (e, g) => { const r = filas.find((x) => x.edad === e && x.genero === g); return r ? r[k] || 0 : 0; };
+  const max = Math.max(...filas.map((r) => r[k] || 0)) || 1;
   const muj = filas.filter((r) => r.genero === 'female').reduce((t, r) => t + (r[k] || 0), 0);
-  ley.append(nuevo('span', 'f', `Mujeres ${F.frac(muj / total)}`), nuevo('span', 'm', `Hombres ${F.frac((total - muj) / total)}`));
-  el.append(ley);
-  const grid = nuevo('div', 'cv-edad');
-  for (const e of edades) {
-    const fila = nuevo('div', 'cv-edad-fila');
-    fila.append(nuevo('span', 'ed cv-mono', e));
-    const barras = nuevo('div', 'barras');
+  const cab = nuevo('div', 'pir-cab');
+  const lado = (clase, nombre, v) => { const d = nuevo('div', 'lado ' + clase); d.append(nuevo('span', 'p cv-disp', F.frac(v / total)), nuevo('span', 'n cv-mono', nombre)); return d; };
+  cab.append(lado('f', 'Mujeres', muj), lado('m', 'Hombres', total - muj));
+  el.append(cab);
+  const topV = max;
+  const pir = nuevo('div', 'cv-pir');
+  for (const e of edades.slice().reverse()) {
+    const fila = nuevo('div', 'pir-fila');
     for (const [g, clase] of [['female', 'f'], ['male', 'm']]) {
-      const r = filas.find((x) => x.edad === e && x.genero === g);
-      const v = r ? r[k] || 0 : 0;
-      const linea = nuevo('div', 'linea');
-      linea.append(barra((v / max) * 100, clase), nuevo('span', 'n', F.n(v)));
-      barras.append(linea);
+      const v = val(e, g);
+      const lado = nuevo('div', 'pir-lado ' + clase);
+      const bar = nuevo('span', 'pir-bar' + (v === topV ? ' top' : '')); bar.style.width = Math.max(v > 0 ? 3 : 0, (v / max) * 100) + '%';
+      const n = nuevo('span', 'pir-n', v > 0 ? F.frac(v / total) : '');
+      if (clase === 'f') lado.append(n, bar); else lado.append(bar, n);
+      fila.append(lado);
+      if (clase === 'f') fila.append(nuevo('span', 'pir-edad cv-mono', e));
     }
-    fila.append(barras);
-    grid.append(fila);
+    pir.append(fila);
   }
-  el.append(grid);
+  el.append(pir);
 });
+
+// Plataformas: una barra repartida y una tarjeta por plataforma
 dash.draw('aud-plat', (el) => {
   el.replaceChildren();
   const s = objDe('segmentos'); if (!s) return;
   const [k, nombre] = metricaAud();
   const filas = (s.plataformas || []).filter((r) => r.inversion > 0 || r[k] > 0);
   const inv = filas.reduce((t, r) => t + r.inversion, 0);
-  if (!filas.length) return vacioAud(el);
+  if (!filas.length || !inv) return vacioAud(el);
+  const costos = filas.map((r) => div0(r.inversion, r[k])).filter(Boolean);
+  const minCosto = k !== 'impresiones' && costos.length > 1 ? Math.min(...costos) : null;
+  const reparto = nuevo('div', 'plat-reparto');
+  for (const r of filas) { const seg = nuevo('span'); seg.style.flex = String(r.inversion / inv); seg.style.background = COLORES_PLAT[r.plataforma] || '#8E8E96'; seg.title = r.plataforma; reparto.append(seg); }
+  el.append(reparto);
+  const lista = nuevo('div', 'plat-lista');
   for (const r of filas) {
-    const fila = nuevo('div', 'cv-plat');
-    const cab = nuevo('div', 'cab'); cab.append(nuevo('span', 'nom', r.plataforma), nuevo('span', 'pct cv-mono', F.frac(div0(r.inversion, inv) || 0) + ' de la inversión'));
-    fila.append(cab, barra((div0(r.inversion, inv) || 0) * 100));
-    const pie = nuevo('div', 'pie');
-    pie.append(nuevo('span', '', cantidad(r[k] || 0, nombre)));
+    const c = nuevo('div', 'plat');
+    const cab = nuevo('div', 'cab');
+    const punto = nuevo('i'); punto.style.background = COLORES_PLAT[r.plataforma] || '#8E8E96';
+    const nom = nuevo('span', 'nom'); nom.append(punto, document.createTextNode(r.plataforma));
+    cab.append(nom, nuevo('span', 'pct cv-disp', F.frac(r.inversion / inv)));
+    c.append(cab);
+    const datos = nuevo('div', 'datos');
+    datos.append(nuevo('span', '', cantidad(r[k] || 0, nombre)));
     const costo = div0(r.inversion, r[k]);
-    if (costo && k !== 'impresiones') pie.append(nuevo('span', '', `${F.gs(costo)} c/u`));
-    fila.append(pie);
-    el.append(fila);
+    if (costo && k !== 'impresiones') datos.append(nuevo('span', costo === minCosto ? 'mejor' : '', `${F.gs(costo)} ${POR_UNO[k] || ''}`));
+    c.append(datos);
+    if (costo && costo === minCosto) c.append(nuevo('span', 'sello cv-mono', 'Más rendidora'));
+    lista.append(c);
   }
+  el.append(lista);
 });
+
+// Zonas: ranking con posición, barra y porcentaje
 dash.draw('aud-reg', (el) => {
   el.replaceChildren();
   const s = objDe('segmentos'); if (!s) return;
   const [k] = metricaAud();
-  const filas = (s.regiones || []).filter((r) => r[k] > 0).sort((a, b) => b[k] - a[k]).slice(0, 8);
+  const todas = (s.regiones || []).filter((r) => r[k] > 0).sort((a, b) => b[k] - a[k]);
+  const filas = todas.slice(0, 7);
   if (!filas.length) return vacioAud(el);
-  const max = filas[0][k], total = (s.regiones || []).reduce((t, r) => t + (r[k] || 0), 0);
-  for (const r of filas) {
-    const fila = nuevo('div', 'cv-reg');
-    const cab = nuevo('div', 'cab');
-    cab.append(nuevo('span', 'nom', zona(r.region)), nuevo('span', 'n cv-mono', `${F.n(r[k])} · ${F.frac(r[k] / total)}`));
-    fila.append(cab, barra((r[k] / max) * 100));
+  const max = filas[0][k], total = todas.reduce((t, r) => t + r[k], 0);
+  filas.forEach((r, i) => {
+    const fila = nuevo('div', 'reg' + (i === 0 ? ' uno' : ''));
+    fila.append(nuevo('span', 'pos cv-mono', String(i + 1)));
+    const medio = nuevo('div', 'medio');
+    const cab = nuevo('div', 'cab'); cab.append(nuevo('span', 'nom', zona(r.region)), nuevo('span', 'pct cv-disp', F.frac(r[k] / total)));
+    const bar = nuevo('div', 'bar'); const fill = nuevo('i'); fill.style.width = Math.max(2, (r[k] / max) * 100) + '%'; bar.append(fill);
+    medio.append(cab, bar);
+    fila.append(medio);
     el.append(fila);
-  }
+  });
+  if (todas.length > filas.length) el.append(nuevo('p', 'reg-resto', `Y ${todas.length - filas.length} zonas más con el ${F.frac(todas.slice(7).reduce((t, r) => t + r[k], 0) / total)} restante.`));
 });
 
 // ===== Descargar en PDF =====
