@@ -76,3 +76,17 @@ insert into public.clientes (nombre, slug, meta_ad_account_id, tipo, logo_url) v
   ('VECAB', 'vecab', '1667857001714420', 'mensajes', '/clientes/vecab.svg'),
   ('A un Click', 'a-un-click', '1608199064350567', 'ventas', null)
 on conflict (slug) do nothing;
+
+-- Logos de clientes: se suben desde el panel y se ven públicamente en los reportes.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('logos', 'logos', true, 2097152, array['image/png', 'image/jpeg', 'image/webp'])
+on conflict (id) do update set public = true, file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists "equipo ve logos" on storage.objects;
+create policy "equipo ve logos" on storage.objects for select to authenticated using (bucket_id = 'logos' and public.es_equipo());
+drop policy if exists "equipo sube logos" on storage.objects;
+create policy "equipo sube logos" on storage.objects for insert to authenticated with check (bucket_id = 'logos' and public.es_equipo());
+drop policy if exists "equipo cambia logos" on storage.objects;
+create policy "equipo cambia logos" on storage.objects for update to authenticated using (bucket_id = 'logos' and public.es_equipo()) with check (bucket_id = 'logos' and public.es_equipo());
+drop policy if exists "equipo borra logos" on storage.objects;
+create policy "equipo borra logos" on storage.objects for delete to authenticated using (bucket_id = 'logos' and public.es_equipo());

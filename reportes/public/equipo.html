@@ -88,12 +88,20 @@
           <label>Identificador<input type="text" name="slug" maxlength="40" pattern="[a-z0-9\-]{2,40}" placeholder="ej. vecab" required></label>
           <label>Cuenta de Meta (ID)<input type="text" name="meta_ad_account_id" pattern="(act_)?[0-9]{5,25}" placeholder="ej. 1667857001714420" required></label>
           <label>Objetivo principal<select name="tipo" class="eq-select"><option value="mensajes">Conversaciones de WhatsApp</option><option value="ventas">Ventas web</option></select></label>
-          <label class="full">Logo (dirección de la imagen)<input type="text" name="logo_url" maxlength="300" placeholder="Opcional: /clientes/nombre.svg o https://…"></label>
+          <div class="full eq-logo">
+            <div class="eq-logo-vista" id="logo-vista"><span>Sin logo</span></div>
+            <div class="eq-logo-acc">
+              <label class="cv-btn sec eq-subir">Subir logo<input type="file" name="logo" accept="image/png,image/jpeg,image/webp" hidden></label>
+              <button type="button" class="cv-link" id="btn-quitar-logo" hidden>Quitar logo</button>
+              <span class="eq-ayuda">PNG, JPG o WEBP de hasta 2 MB. Mejor con fondo transparente.</span>
+            </div>
+          </div>
           <label class="eq-check"><input type="checkbox" name="activo" checked> Reporte activo</label>
           <div class="acciones">
             <button type="submit" class="cv-btn">Guardar cliente</button>
             <button type="button" class="cv-btn sec" id="btn-rotar" hidden>Generar link nuevo</button>
             <button type="button" class="cv-btn sec" id="btn-cancelar-cliente">Cancelar</button>
+            <button type="button" class="cv-btn sec eq-borrar" id="btn-borrar-cliente" hidden>Borrar cliente</button>
             <span class="cv-msg" id="msg-cliente"></span>
           </div>
         </form>
