@@ -525,7 +525,7 @@ const BLOQUES_M = [
     frase: (m) => div0(m.inversion, m.conversaciones) ? `Cada conversación costó ${F.gs(m.inversion / m.conversaciones)}.` : null,
     extras: [['Costo por conversación', (m) => div0(m.inversion, m.conversaciones), F.gs, 'baja'], ['Contactos nuevos', (m) => m.primeras_respuestas, F.n, 'sube'],
       ['Por cada 100 clics', (m) => div0(m.conversaciones * 100, m.clics_enlace), F.uno, 'sube']]},
-  {id: 'web', t: 'Tienda web', ancho: true, tipo: 'embudo', cond: (m) => m.vistas_destino > 0 || m.compras > 0 || m.carrito > 0,
+  {id: 'web', t: 'Tienda web', ancho: true, tipo: 'embudo', cond: (m) => C.tipo === 'ventas' && (m.vistas_destino > 0 || m.compras > 0 || m.carrito > 0),
     principal: ['Compras', (m) => m.compras, F.n, 'sube'],
     frase: (m) => div0(m.valor_compras, m.inversion) ? `Cada ₲ 1 invertido volvió como ₲ ${nf1.format(m.valor_compras / m.inversion)} en compras web.` : null,
     pasos: [['Visitaron la página', (m) => m.vistas_destino], ['Agregaron al carrito', (m) => m.carrito], ['Iniciaron el pago', (m) => m.pagos_iniciados], ['Compraron', (m) => m.compras]],
@@ -601,7 +601,7 @@ const metricaAud = () => {
   const todos = s ? [...(s.edad_genero || []), ...(s.plataformas || [])] : [];
   const suma = (k) => todos.reduce((t, r) => t + (r[k] || 0), 0);
   if (C.tipo !== 'ventas' && suma('conversaciones') > 0) return ['conversaciones', 'conversaciones'];
-  if (suma('compras') > 0) return ['compras', 'compras web'];
+  if (C.tipo === 'ventas' && suma('compras') > 0) return ['compras', 'compras web'];
   if (suma('clics_enlace') > 0) return ['clics_enlace', 'clics en el enlace'];
   return ['impresiones', 'impresiones'];
 };
